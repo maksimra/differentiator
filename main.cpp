@@ -2,45 +2,51 @@
 
 int main (const int argc, const char* argv[])
 {
-
     const char* NAME = argv[1];
     struct Vars VARS[10] = {};
-    FILE* log_file = fopen ("log_file.txt", "w");
+    enum DifError error = DIF_NO_ERROR;
+
+
     FILE* source = fopen (NAME, "r");
-    FILE* output = fopen ("output.txt", "w");
+    FILE* log_file = fopen ("log_file.txt", "w");
+    FILE* text_tree = fopen ("text_tree.txt", "w");
     FILE* g_viz = fopen ("graphviz.txt", "w");
-    FILE* taylor = fopen ("taylor.txt", "w");
+
+    if (log_file == NULL)
+        printf ("Error opening the log file.\n");
 
     dif_set_log_file (log_file);
 
-    enum DifError error = DIF_NO_ERROR;
 
-    if (source == NULL || output == NULL || g_viz == NULL || log_file == NULL)
+    if (source == NULL || text_tree == NULL || g_viz == NULL || log_file == NULL)
         error = DIF_ERROR_FOPEN;
 
     dif_print_error (error);
 
 
     error = check_argc (argc, 2);
-    int n_space = 0;
-
-
     dif_print_error (error);
-    Node* root = NULL;
-    int size = 0;
 
+
+    int size = 0;
     error = read_file (NAME, &size);
+    dif_print_error (error);
+
+
     struct Tokens* TOK = (struct Tokens*) calloc ((size_t) size, sizeof (struct Tokens));
 
     if (TOK == NULL)
         error = DIF_ERROR_CALLOC;
 
     dif_print_error (error);
+
+
     error = token (TOK, VARS);
     dif_print_error (error);
 
+
     int n_tok = 0;
-    root = get_g (&error, TOK, &n_tok);
+    Node* root = get_g (&error, TOK, &n_tok);
 
     if (error != DIF_NO_ERROR)
     {
@@ -50,20 +56,20 @@ int main (const int argc, const char* argv[])
         return 0;
     }
 
+
     error = graphviz (root, g_viz, VARS);
-    //Node* simpl_root = simplification (root, &error);
-    dif_tree_print (root, output, &n_space);
+
+
+    int n_space = 0;
+    dif_tree_print_txt (root, text_tree, &n_space);
+
+
+    taylor (root, &error);
     dif_print_error (error);
 
-    //taylr (simpl_root, taylor, &error);
 
-    /*Node* dif_root = diff (simpl_root);
-    error = graphviz (simpl_root, g_viz);
-    dif_print_error (error);
-    tree_dtor (dif_root);*/
-    tree_dtor (root);
     free (TOK);
-    fclose (output);
+    fclose (text_tree);
     fclose (source);
     return 0;
 }

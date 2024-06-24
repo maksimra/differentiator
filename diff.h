@@ -13,7 +13,7 @@ typedef const char* chr;
 // обёртки над токинизатором
 // dsl над дифференциатором
 // дерево в тейлоре
-
+// ---^--- подсказки, смысл которых я забыл
 
 union Elem
 {
@@ -123,7 +123,7 @@ enum DifError dif_read_tree     (FILE* file, const char* NAME, Node** root);
 int           space_counter     (char* line);
 enum DifError new_node          (Node** node);
 int           search_oper       (const char* str, long len);
-void          dif_tree_print    (Node* node, FILE* file, int* n_space);
+void          dif_tree_print_txt(Node* node, FILE* file, int* n_space);
 void          printing_branches (Node* node, FILE* file, int* n_space);
 void          printf_str        (FILE* file, Node* node, int n_space);
 enum DifError dif_set_log_file  (FILE* file);
@@ -156,7 +156,7 @@ Node*         get_n             (enum DifError* error, struct Tokens* TOK, int* 
 Node*         simplification    (Node* node, enum DifError* error);
 Node*         nul_and_one       (Node* node, bool* change, enum DifError* error);
 Node*         swertka_const     (Node* node, bool* change);
-void          taylr             (Node* node, FILE* output, enum DifError* error);
+void          taylor             (Node* node, enum DifError* error);
 int           fact              (int n);
 Node*         n_diff            (Node* node, int i);
 Node*         change_x0         (Node* node, double x0);

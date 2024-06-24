@@ -100,7 +100,7 @@ void printing_branches (Node* node, FILE* file, int* n_space)
 {
     if (node != NULL)
     {
-        dif_tree_print (node, file, n_space);
+        dif_tree_print_txt (node, file, n_space);
     }
     else
     {
@@ -109,7 +109,7 @@ void printing_branches (Node* node, FILE* file, int* n_space)
     }
 }
 
-void dif_tree_print (Node* node, FILE* file, int* n_space)
+void dif_tree_print_txt (Node* node, FILE* file, int* n_space)
 {
     printf_str (file, node, *n_space);
     (*n_space) += 4;
@@ -804,35 +804,34 @@ Node* swertka_const (Node* node, bool* change)
     return node;
 }
 
-void taylr (Node* node, FILE* output, enum DifError* error)
+void taylor (Node* node, enum DifError* error)
 {
-    printf ("Здравствуйте! Желаете разложить по Тейлору выражение из calcul.txt?\n");
+    printf ("Hello! Would you like to decompose the expression? ('Yes' or 'No')\n");
     char answer[FOR_ANSW] = {};
     if (fgets (answer, FOR_ANSW, stdin) == NULL)
         *error = DIF_FGETS_ERROR;
     if (strlen (answer) > YES_NO_LEN)
-        printf ("Некорректный ответ. Часть информации утеряна.\n");
+        printf ("Incorrect response. Some of the information is lost.\n");
     if (strncmp (answer, "No\n", YES_NO_LEN) == 0)
     {
-        printf ("Печалька :(\n");
-        *error = DIF_NO_ERROR;
+        printf ("Sadly :(\n");
+        return;
     }
-
     if (strncmp (answer, "Yes\n", YES_NO_LEN) == 0)
     {
         double x0 = NAN;
         int n = 0;
-        printf ("Принято. В окрестностях какого x будем раскладывать?\n");
+        printf ("In the vicinity of which x? (enter a number)\n");
 
         if (scanf ("%lf", &x0) == 0)
             *error = DIF_ERROR_x0;
 
-        printf ("Принято. До о-малого в какой степени раскладываем?\n");
+        printf ("To what extent? (enter a number)\n");
 
         if (scanf ("%d", &n) == 0)
             *error = DIF_ERROR_N;
 
-        printf ("Считаю...\n");
+        printf ("Processing...\n");
 
         printf ("y = ");
 
@@ -859,8 +858,11 @@ void taylr (Node* node, FILE* output, enum DifError* error)
         tree_dtor (node);
 
         printf ("o (x - %lf)^%d\n", x0, n);
-        printf ("Было непросто.\n");
+        printf ("It was difficult.\n");
     }
+
+    else
+        printf ("Incorrect response. Goodbye!\n");
 }
 
 int fact (int n)
