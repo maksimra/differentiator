@@ -2,20 +2,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <sys/stat.h> // зашить команду систем для графиза (не работает!!!)
+#include <sys/stat.h>
 #include <stdbool.h>
-#include <assert.h> // пофиксить, что в случае одной ноды ничего не рисуется
+#include <assert.h>
 #include <math.h>
+#include <unistd.h>
 
 typedef const char* chr;
 
+// обёртки над токинизатором
+// dsl над дифференциатором
+// дерево в тейлоре
 
-/*struct
-{
-    enum,
-    union {char*, double, char, enum (для оператора)}
-}
-*/
 
 union Elem
 {
@@ -50,7 +48,8 @@ struct Ops
 
 struct Vars
 {
-    char name;
+    char* name;
+    int len;
     int num;
 };
 
@@ -97,14 +96,10 @@ enum DifError
     DIF_ERROR_FOPEN,
     DIF_FUNC_ERROR,
     DIF_SYNTAX_ERROR,
-    DIF_DIV_NUL
-};
-
-const struct Vars VARS[] =
-{
-    {'x', 0},
-    {'y', 1},
-    {'z', 2}
+    DIF_DIV_NUL,
+    DIF_FGETS_ERROR,
+    DIF_ERROR_x0,
+    DIF_ERROR_N
 };
 
 const struct Ops OP[] =
@@ -124,7 +119,7 @@ const struct Ops OP[] =
 const int N_FUNC = sizeof (OP) / sizeof (OP[0]);
 
 enum DifError create_tree       (char* buffer, Node** cur_node, int* pos);
-enum DifError dif_read_tree         (FILE* file, const char* NAME, Node** root);
+enum DifError dif_read_tree     (FILE* file, const char* NAME, Node** root);
 int           space_counter     (char* line);
 enum DifError new_node          (Node** node);
 int           search_oper       (const char* str, long len);
@@ -138,19 +133,19 @@ enum DifError check_argc        (const int argc, int necessary_n_arg);
 void          tree_dtor         (Node* root);
 Node*         copy              (const Node* node);
 Node*         create_node       (enum Type type, double value, Node* left, Node* right);
-enum DifError graphviz          (Node* node, FILE* file);
+enum DifError graphviz          (Node* node, FILE* file, struct Vars* VARS);
 void          print_start       (FILE* file);
 void          print_end         (FILE* file);
-void          print_filling     (Node* node, FILE* file);
-void          draw_right        (Node* node, FILE* file);
-void          draw_left         (Node* node, FILE* file);
+void          print_filling     (Node* node, FILE* file, struct Vars* VARS);
+void          draw_right        (Node* node, FILE* file, struct Vars* VARS);
+void          draw_left         (Node* node, FILE* file, struct Vars* VARS);
 Node*         diff              (const Node* node);
 enum DifError read_file         (const char* NAME, int* size);
 int           search_var        (void);
-enum DifError token             (struct Tokens* TOK);
+enum DifError token             (struct Tokens* TOK, struct Vars* VARS);
 void          skip_space        (char** str);
 int           dif_search_func   (const char* name, size_t len);
-void          tokin_dump        (struct Tokens* TOK, int n_tok);
+void          tokin_dump        (struct Tokens* TOK, int n_tok, struct Vars* VARS);
 Node*         get_g             (enum DifError* error, struct Tokens* TOK, int* n_tok);
 Node*         get_e             (enum DifError* error, struct Tokens* TOK, int* n_tok);
 Node*         get_k             (enum DifError* error, struct Tokens* TOK, int* n_tok);
@@ -161,3 +156,8 @@ Node*         get_n             (enum DifError* error, struct Tokens* TOK, int* 
 Node*         simplification    (Node* node, enum DifError* error);
 Node*         nul_and_one       (Node* node, bool* change, enum DifError* error);
 Node*         swertka_const     (Node* node, bool* change);
+void          taylr             (Node* node, FILE* output, enum DifError* error);
+int           fact              (int n);
+Node*         n_diff            (Node* node, int i);
+Node*         change_x0         (Node* node, double x0);
+bool          couple_mis_op     (int n_tok, struct Tokens* TOK);
