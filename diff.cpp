@@ -122,8 +122,6 @@ enum DifError allocate_node (Node** node)
 
 void tree_dtor (Node* root)
 {
-    assert (root != NULL);
-
     if (root->left != NULL)
         tree_dtor (root->left);
 
@@ -879,7 +877,8 @@ Node* get_g (enum DifError* error, struct Tokens* TOK, int* n_tok)
 {
     Node* val = get_e (error, TOK, n_tok);
 
-    if (TOK[*n_tok].type == TXT && TOK[*n_tok].elem.symb != '$')
+    if (TOK[*n_tok].type != TXT ||
+        TOK[*n_tok].type == TXT && TOK[*n_tok].elem.symb != '$')
     {
         printf ("Не смогли обработать выражение :(\n");
         *error = DIF_SYNTAX_ERROR;
@@ -901,8 +900,7 @@ Node* get_e (enum DifError* error, struct Tokens* TOK, int* n_tok)
             printf ("Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
                     "Работа программы завершена досрочно :(\n", get_oper_name (TOK[*n_tok].elem.oper),
                                                                 get_oper_name (TOK[*n_tok - 1].elem.oper));
-            return create_node (OPER, ADD, val, NULL); // не разбираюсь, ADD или SUB,
-                                                       // т.к. в любом случае надо удалять дерево
+            return NULL;
         }
 
         val = create_node (OPER, MUL, create_node (NUM, -1, NULL, NULL), get_t (error, TOK, n_tok));
@@ -923,8 +921,8 @@ Node* get_e (enum DifError* error, struct Tokens* TOK, int* n_tok)
             printf ("Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
                     "Работа программы завершена досрочно :(\n", get_oper_name (TOK[*n_tok].elem.oper),
                                                                 get_oper_name (TOK[*n_tok - 1].elem.oper));
-            return create_node (OPER, ADD, val, NULL); // не разбираюсь, ADD или SUB,
-                                                       // т.к. в любом случае надо удалять дерево
+            tree_dtor (val);
+            return NULL;
         }
 
         Node* val2 = get_t (error, TOK, n_tok);
@@ -966,8 +964,8 @@ Node* get_k (enum DifError* error, struct Tokens* TOK, int* n_tok)
             printf ("Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
                     "Работа программы завершена досрочно :(\n", get_oper_name (TOK[*n_tok].elem.oper),
                                                                 get_oper_name (TOK[*n_tok - 1].elem.oper));
-            return create_node (OPER, ADD, val, NULL); // не разбираюсь, ADD или SUB,
-                                                       // т.к. в любом случае надо удалять дерево
+            tree_dtor (val);
+            return NULL;
         }
 
         Node* val2 = get_p (error, TOK, n_tok);
@@ -990,8 +988,23 @@ Node* get_s (enum DifError* error, struct Tokens* TOK, int* n_tok)
         int n_oper = TOK[*n_tok].elem.oper;
         (*n_tok)++;
 
-        if (TOK[*n_tok].type == TXT && TOK[*n_tok].elem.symb != '(')
+        if (TOK[*n_tok].type == OPER)
+        {
             *error = DIF_SYNTAX_ERROR;
+            printf ("Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
+                    "Работа программы завершена досрочно :(\n", get_oper_name (TOK[*n_tok].elem.oper),
+                                                                get_oper_name (TOK[*n_tok - 1].elem.oper));
+            return NULL;
+        }
+
+        if (TOK[*n_tok].type == TXT && TOK[*n_tok].elem.symb != '(')
+        {
+            *error = DIF_SYNTAX_ERROR;
+            printf ("Введено некорректное выражение:"
+                    "после оператора %s ожидается '(' "
+                    "(пробелы допускаются).\n", get_oper_name (TOK[*n_tok - 1].elem.oper));
+            return NULL;
+        }
 
         (*n_tok)++;
         Node* val = get_e (error, TOK, n_tok);
@@ -1058,9 +1071,8 @@ Node* get_t (enum DifError* error, struct Tokens* TOK, int* n_tok)
             printf ("Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
                     "Работа программы завершена досрочно :(\n", get_oper_name (TOK[*n_tok].elem.oper),
                                                                 get_oper_name (TOK[*n_tok - 1].elem.oper));
-            return create_node (OPER, ADD, val, NULL); // не разбираюсь, ADD или SUB,
-                                                       // т.к. в любом случае надо удалять дерево
-        }
+            tree_dtor (val);
+            return NULL;
 
         Node* val2 = get_s (error, TOK, n_tok);
 
