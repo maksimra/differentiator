@@ -36,9 +36,10 @@ struct Ops
     int number;
     const char* name;
     size_t len;
-    /*Node* (*dif) (Node* node);
+    Node* (*dif) (Node* node);
     Node* (*smp) (Node* node);
-    bool couple_mis_op*/
+    Node* (*eval) (Node* node);
+    bool is_func;
 };
 
 struct Vars
