@@ -1,38 +1,28 @@
 #include "diff.h"
 
+static FILE* log_file = stderr;
+
+#define PRINT(...) if (log_file != NULL) fprintf (log_file, __VA_ARGS__)
+
 char* s = NULL;
 
-const int N_OPER = sizeof (OP) / sizeof (OP[0]);
+static const int OPER_N_SYMB = 10;
 
-const int OPER_N_SYMB = 10;
+static const int FOR_ANSW = 10;
 
-const int MAX_N_VARS = 10;
+static const int YES_NO_LEN = 4;
 
-const int FOR_ANSW = 10;
+static const int N_OPERS = sizeof (OP) / sizeof (OP[0]);
 
-const int YES_NO_LEN = 4;
 
-const int N_OPERS = sizeof (OP) / sizeof (OP[0]);
-
-static FILE* log_file = stderr;
 
 enum DifError dif_set_log_file (FILE* file)
 {
-    if (file == NULL)
-        return DIF_NULL_PTR_LOG;
     log_file = file;
     return DIF_NO_ERROR;
 }
 
-enum DifError check_argc (const int argc, int necessary_n_arg)
-{
-    if (argc != necessary_n_arg)
-        return DIF_ERROR_ARGC;
-
-    return DIF_NO_ERROR;
-}
-
-enum DifError read_file (const char* NAME, int* size)
+enum DifError read_file (const char* NAME, size_t* size)
 {
     struct stat statbuf = {};
 
@@ -41,38 +31,39 @@ enum DifError read_file (const char* NAME, int* size)
     if (stat (NAME, &statbuf))
         return DIF_ERROR_STAT;
 
-    s = (char*) calloc ((long unsigned int) statbuf.st_size + sizeof (char), sizeof (char));
+    s = (char*) calloc ((size_t) statbuf.st_size + sizeof (char), sizeof (char));
 
     if (s == NULL)
         return DIF_ERROR_CALLOC;
 
-    *size = (int) fread ((char*) s, sizeof (char), (size_t) statbuf.st_size, file);
+    *size = fread (s, sizeof (char), (size_t) statbuf.st_size, file);
 
     if (*size != statbuf.st_size)
+    {
+        free (s);
         return DIF_ERROR_FREAD;
+    }
 
     fclose (file);
 
     return DIF_NO_ERROR;
 }
 
-int search_oper (const char* str, long len)
+int search_oper (const char* str, size_t len)
 {
-    int n_oper = 0;
-    while (n_oper < N_OPERS)
+    for (int n_oper = 0; n_oper < N_OPERS; n_oper ++)
     {
-        if (strncmp (str, OP[n_oper].name, (size_t) len) == 0)
+        if (strncmp (str, OP[n_oper].name, len) == 0)
         {
             return n_oper;
         }
-        n_oper += 1;
     }
     return -1;
 }
 
-int space_counter (char* line)
+size_t count_space (const char* line)
 {
-    int n_space = 0;
+    size_t n_space = 0;
     while (isspace (*(line + n_space)))
     {
         n_space++;
@@ -80,11 +71,11 @@ int space_counter (char* line)
     return n_space;
 }
 
-void printf_str (FILE* file, Node* node, int n_space)
+void printf_str (FILE* file, const Node* node, int n_space)
 {
     if (node->type == OPER)
     {
-        fprintf (file, "%*c(\"%s\"\n", n_space, ' ', OP[node->value.n_oper].name);
+        fprintf (file, "%*c(\"%s\"\n", n_space, ' ', get_oper_name (node->value.oper));
     }
     else if (node->type == VAR)
     {
@@ -96,11 +87,11 @@ void printf_str (FILE* file, Node* node, int n_space)
     }
 }
 
-void printing_branches (Node* node, FILE* file, int* n_space)
+void print_node_or_decr_tabs (Node* node, FILE* file, int* n_space)
 {
     if (node != NULL)
     {
-        dif_tree_print_txt (node, file, n_space);
+        print_tree_txt_incr_tabs (node, file, n_space);
     }
     else
     {
@@ -109,18 +100,18 @@ void printing_branches (Node* node, FILE* file, int* n_space)
     }
 }
 
-void dif_tree_print_txt (Node* node, FILE* file, int* n_space)
+void print_tree_txt_incr_tabs (Node* node, FILE* file, int* n_space)
 {
     printf_str (file, node, *n_space);
     (*n_space) += 4;
 
-    printing_branches (node->left, file, n_space);
-    printing_branches (node->right, file, n_space);
+    print_node_or_decr_tabs (node->left, file, n_space);
+    print_node_or_decr_tabs (node->right, file, n_space);
 
     fprintf (file, ")\n");
 }
 
-enum DifError new_node (Node** node)
+enum DifError allocate_node (Node** node)
 {
     Node* temp = (Node*) calloc (1, sizeof (Node));
     if (temp == NULL)
@@ -149,11 +140,13 @@ enum DifError graphviz (Node* node, FILE* file, struct Vars* VARS)
 
     print_start (file);
 
-    print_filling (node, file, VARS);
+    print_connections (node, file, VARS);
 
     print_end (file);
     fclose (file);
-    system ("dot graphviz.txt -Tsvg -otree.svg");
+
+    const char* cmd = "dot graphviz.txt -Tsvg -otree.svg";
+    system (cmd);
     return DIF_NO_ERROR;
 }
 
@@ -167,7 +160,7 @@ void print_end (FILE* file)
     fprintf (file, "}");
 }
 
-void print_filling (Node* node, FILE* file, struct Vars* VARS)
+void print_connections (Node* node, FILE* file, struct Vars* VARS)
 {
     draw_left (node, file, VARS);
     draw_right (node, file, VARS);
@@ -186,20 +179,20 @@ void draw_right (Node* node, FILE* file, struct Vars* VARS)
         if (node->right->type == OPER)
         {
             fprintf (file, "{\"%s\n%p\"--\"%s\n%p\"[color = \"%s\"]};\n",
-            OP[node->value.n_oper].name, node, OP[node->right->value.n_oper].name, node->right, color);
+            get_oper_name (node->value.oper), node, get_oper_name (node->right->value.oper), node->right, color);
         }
         else if (node->right->type == NUM)
         {
             fprintf (file, "{\"%s\n%p\"--\"%.3lf\n%p\"[color = \"%s\"]};\n",
-            OP[node->value.n_oper].name, node, node->right->value.number, node->right, color);
+            get_oper_name (node->value.oper), node, node->right->value.number, node->right, color);
         }
         else if (node->right->type == VAR)
         {
             fprintf (file, "{\"%s\n%p\"--\"%.*s\n%p\"[color = \"%s\"]};\n",
-            OP[node->value.n_oper].name, node, VARS[node->right->value.n_var].len, VARS[node->right->value.n_var].name, node->right, color);
+            get_oper_name (node->value.oper), node, VARS[node->right->value.n_var].len, VARS[node->right->value.n_var].name, node->right, color);
         }
 
-        print_filling (node->right, file, VARS);
+        print_connections (node->right, file, VARS);
     }
     free (color);
 }
@@ -216,19 +209,19 @@ void draw_left (Node* node, FILE* file, struct Vars* VARS)
         if (node->left->type == OPER)
         {
             fprintf (file, "{\"%s\n%p\"--\"%s\n%p\"[color = \"%s\"]};\n",
-            OP[node->value.n_oper].name, node, OP[node->left->value.n_oper].name, node->left, color);
+            get_oper_name (node->value.oper), node, get_oper_name (node->left->value.oper), node->left, color);
         }
         else if (node->left->type == NUM)
         {
             fprintf (file, "{\"%s\n%p\"--\"%.3lf\n%p\"[color = \"%s\"]};\n",
-            OP[node->value.n_oper].name, node, node->left->value.number, node->left, color);
+            get_oper_name (node->value.oper), node, node->left->value.number, node->left, color);
         }
         else if (node->left->type == VAR)
         {
             fprintf (file, "{\"%s\n%p\"--\"%.*s\n%p\"[color = \"%s\"]};\n",
-            OP[node->value.n_oper].name, node, VARS[node->left->value.n_var].len, VARS[node->left->value.n_var].name, node->left, color);
+            get_oper_name (node->value.oper), node, VARS[node->left->value.n_var].len, VARS[node->left->value.n_var].name, node->left, color);
         }
-        print_filling (node->left, file, VARS);
+        print_connections (node->left, file, VARS);
     }
     free (color);
 }
@@ -239,7 +232,7 @@ Node* create_node (enum Type type, double value, Node* left, Node* right)
     new_node->type = type;
 
     if (type == OPER)
-        new_node->value.n_oper = (int) value;
+        new_node->value.oper = (enum OPER) value;
 
     else if (type == NUM)
         new_node->value.number = value;
@@ -255,6 +248,7 @@ Node* create_node (enum Type type, double value, Node* left, Node* right)
 
 Node* copy (const Node* node)
 {
+    // printf ("node.type == %d\n", node->type);
     Node* copy_node = (Node*) calloc (1, sizeof (Node));
 
     copy_node->type = node->type;
@@ -266,7 +260,7 @@ Node* copy (const Node* node)
         copy_node->value.n_var = node->value.n_var;
 
     else if (node->type == OPER)
-        copy_node->value.n_oper = node->value.n_oper;
+        copy_node->value.oper = node->value.oper;
 
     if (node->left != NULL)
         copy_node->left = copy (node->left);
@@ -285,7 +279,7 @@ Node* copy (const Node* node)
 
 void dif_print_error (enum DifError error)
 {
-    fprintf (log_file, "%s\n", dif_get_error (error));
+    PRINT ("%s\n", dif_get_error (error));
 }
 
 const char* dif_get_error (enum DifError error)
@@ -307,7 +301,10 @@ const char* dif_get_error (enum DifError error)
         case DIF_ERROR_STRTOD:
             return "Dif: Ошибка работы функции strtod.";
         case DIF_ERROR_ARGC:
-            return "Dif: Введено некорректное число аргументов.";
+            return "Dif: Введено некорректное число аргументов. "
+                   "Введите \"./do name_file.txt\".";
+        case DIF_ERROR_ARGV:
+            return "Dif: Введено некорректное имя файла.";
         case DIF_ERROR_FOPEN:
             return "Dif: Ошибка открытия файла (fopen).";
         case DIF_FUNC_ERROR:
@@ -315,7 +312,9 @@ const char* dif_get_error (enum DifError error)
         case DIF_SYNTAX_ERROR:
             return "Dif: Синтаксическая ошибка.";
         case DIF_DIV_NUL:
-            return "Dif: Куда, блин, на нуль делить!";
+            return "Dif: Деление на нуль!";
+        case DIF_LN_NUL:
+            return "Dif: Логарифм от нуля - опасно.";
         default:
             return "Dif: Куда делся мой enum ошибок?";
     }
@@ -330,7 +329,7 @@ Node* diff (const Node* node)
         case VAR:
             return create_node (NUM, 1, NULL, NULL);
         case OPER:
-            switch (OP[node->value.n_oper].op_enum)
+            switch (node->value.oper)
             {
                 case ADD:
                     return create_node (OPER, ADD, diff (node->left), diff (node->right));
@@ -369,14 +368,15 @@ Node* diff (const Node* node)
                 case DIV:
                 {
                     Node* cu = copy (node->left);
-                    Node* cv = copy (node->right);
+                    Node* cv1 = copy (node->right);
+                    Node* cv2 = copy (node->right);
                     Node* du = diff (node->left);
                     Node* dv = diff (node->right);
                     Node* res = create_node (OPER, DIV,
                     create_node (OPER, SUB,
-                    create_node (OPER, MUL, du, cv),
+                    create_node (OPER, MUL, du, cv1),
                     create_node (OPER, MUL, dv, cu)),
-                    create_node (OPER, MUL, cv, cv));
+                    create_node (OPER, POW, cv2, create_node (NUM, 0, NULL, NULL)));
                     return res;
                 }
                 case LN:
@@ -395,7 +395,7 @@ Node* diff (const Node* node)
                     Node* res = create_node (OPER, MUL, dv, h);
                     return res;
                 }
-                case DEG:
+                case POW:
                 {
                     if (node->right->type == NUM && node->left->type == NUM)
                     {
@@ -406,7 +406,7 @@ Node* diff (const Node* node)
                         Node* cu = copy (node->left);
                         Node* du = diff (node->left);
                         Node* pre_res = create_node (OPER, MUL, create_node (NUM, node->right->value.number, NULL, NULL),
-                        create_node (OPER, DEG, cu, create_node (NUM, node->right->value.number - 1, NULL, NULL)));
+                        create_node (OPER, POW, cu, create_node (NUM, node->right->value.number - 1, NULL, NULL)));
                         return create_node (OPER, MUL, pre_res, du);
                     }
                     else if (node->left->type == NUM)
@@ -427,7 +427,7 @@ Node* diff (const Node* node)
                         Node* res2 = create_node (OPER, MUL, du, cv);
                         Node* res3 = create_node (OPER, DIV, res2, copy (cu));
                         Node* res4 = create_node (OPER, ADD, res1, res3);
-                        Node* res5 = create_node (OPER, DEG, copy (cu), copy (cv));
+                        Node* res5 = create_node (OPER, POW, copy (cu), copy (cv));
                         return create_node (OPER, MUL, res5, res4);
                     }
                 }
@@ -437,84 +437,16 @@ Node* diff (const Node* node)
                     Node* cu = copy (node->right);
                     return create_node (OPER, MUL, create_node (OPER, EXP, NULL, cu), du);
                 }
+                default:
+                    assert (0);
             }
-    }
-}
-
-int search_var (void)
-{
-    switch ((int) *s)
-    {
-        case ((int) 'x'):
-            return 0;
-        case ((int) 'y'):
-            return 1;
-        case ((int) 'z'):
-            return 2;
+        case TXT:
         default:
-            return -1;
+            assert (0);
     }
 }
 
-/*enum DifError token (struct Tokens* TOK, struct Vars* VARS)
-{
-    int n_tok = 0;
-    double num = 0;
-    while (*s != '$')
-    {
-        skip_space (&s);
-        char* start_pos = s;
-        int n_var = search_var ();
-        if (n_var != -1)
-        {
-            TOK[n_tok].type = VAR;
-            TOK[n_tok].elem.n_var = n_var;
-            s++;
-            n_tok++;
-            continue;
-        }
-        bool is_al_num = false;
-        while (isalnum (*s) || *s == '.')
-        {
-            is_al_num = true;
-            s++;
-        }
-
-        if (is_al_num == false)
-            s++;
-
-        int n_oper = dif_search_func (start_pos, (size_t) (s - start_pos));
-
-        if (is_al_num == false && n_oper == -1)
-        {
-            TOK[n_tok].type = TXT;
-            TOK[n_tok].elem.symb = *start_pos;
-            n_tok++;
-            continue;
-        }
-        else if (sscanf (start_pos, "%lf", &num) != 0)
-        {
-            TOK[n_tok].type = NUM;
-            TOK[n_tok].elem.num = num;
-            n_tok++;
-            continue;
-        }
-        else
-        {
-            TOK[n_tok].type = OPER;
-            TOK[n_tok].elem.n_oper = n_oper;
-            n_tok++;
-            continue;
-        }
-        return DIF_SYNTAX_ERROR;
-    }
-    TOK[n_tok].type = TXT;
-    TOK[n_tok].elem.symb = '$';
-    tokin_dump (TOK, n_tok);
-    return DIF_NO_ERROR;
-}*/
-
-enum DifError token (struct Tokens* TOK, struct Vars* VARS)
+enum DifError token (struct Tokens* TOK, struct Vars* VARS, int MAX_N_VARS)
 {
     int n_tok = 0;
     double num = 0;
@@ -561,7 +493,7 @@ enum DifError token (struct Tokens* TOK, struct Vars* VARS)
             else
             {
                 TOK[n_tok].type = OPER;
-                TOK[n_tok].elem.n_oper = n_oper;
+                TOK[n_tok].elem.oper = (enum OPER) n_oper;
                 n_tok++;
                 continue;
             }
@@ -600,6 +532,11 @@ enum DifError token (struct Tokens* TOK, struct Vars* VARS)
     return DIF_NO_ERROR;
 }
 
+const char* get_oper_name (enum OPER oper)
+{
+    return OP[(int) oper].name;
+}
+
 void tokin_dump (struct Tokens* TOK, int n_tok, struct Vars* VARS)
 {
     for (int pass = 0; pass < n_tok + 1; pass++)
@@ -607,16 +544,16 @@ void tokin_dump (struct Tokens* TOK, int n_tok, struct Vars* VARS)
         switch (TOK[pass].type)
         {
             case OPER:
-                fprintf (log_file, "OPER: %d --> %s\n", pass, OP[TOK[pass].elem.n_oper].name);
+                PRINT ("OPER: %d --> %s\n", pass, get_oper_name (TOK[pass].elem.oper));
                 break;
             case NUM:
-                fprintf (log_file, "NUM: %d --> %lf\n", pass, TOK[pass].elem.num);
+                PRINT ("NUM: %d --> %lf\n", pass, TOK[pass].elem.num);
                 break;
             case VAR:
-                fprintf (log_file, "VAR: %d --> %.*s\n", pass, VARS[TOK[pass].elem.n_var].len, VARS[TOK[pass].elem.n_var].name);
+                PRINT ("VAR: %d --> %.*s\n", pass, VARS[TOK[pass].elem.n_var].len, VARS[TOK[pass].elem.n_var].name);
                 break;
             case TXT:
-                fprintf (log_file, "TXT: %d --> %c\n", pass, TOK[pass].elem.symb);
+                PRINT ("TXT: %d --> %c\n", pass, TOK[pass].elem.symb);
                 break;
         }
     }
@@ -648,8 +585,21 @@ Node* simplification (Node* node, enum DifError* error)
     do
     {
         change_this_time = false;
-        c_node = swertka_const (c_node, &change_this_time);
+        c_node = swertka_const (c_node, &change_this_time, error);
+
+        if (*error != DIF_NO_ERROR)
+        {
+            tree_dtor (c_node);
+            return NULL;
+        }
+
         c_node = nul_and_one (c_node, &change_this_time, error);
+
+        if (*error != DIF_NO_ERROR)
+        {
+            tree_dtor (c_node);
+            return NULL;
+        }
     }
     while (change_this_time);
 
@@ -667,14 +617,14 @@ Node* nul_and_one (Node* node, bool* change, enum DifError* error)
     if (node->left != NULL && node->left->type == NUM && node->left->value.number == 1)
     {
         Node* res = NULL;
-        switch (OP[node->value.n_oper].op_enum)
+        switch (node->value.oper)
         {
             case MUL:
                 *change = true;
                 res = copy (node->right);
                 tree_dtor (node);
                 return res;
-            case DEG:
+            case POW:
                 *change = true;
                 tree_dtor (node);
                 return create_node (NUM, 1, NULL, NULL);
@@ -682,11 +632,11 @@ Node* nul_and_one (Node* node, bool* change, enum DifError* error)
     }
     if (node->right != NULL && node->right->type == NUM && node->right->value.number == 1)
     {
-        switch (OP[node->value.n_oper].op_enum)
+        switch (node->value.oper)
         {
             case MUL:
             case DIV:
-            case DEG:
+            case POW:
                 *change = true;
                 Node* res = copy (node->left);
                 tree_dtor (node);
@@ -695,11 +645,11 @@ Node* nul_and_one (Node* node, bool* change, enum DifError* error)
     }
     if (node->left != NULL && node->left->type == NUM && node->left->value.number == 0)
     {
-        switch (OP[node->value.n_oper].op_enum)
+        switch (node->value.oper)
         {
             case MUL:
             case DIV:
-            case DEG:
+            case POW:
                 *change = true;
                 tree_dtor (node);
                 return create_node (NUM, 0, NULL, NULL);
@@ -707,7 +657,7 @@ Node* nul_and_one (Node* node, bool* change, enum DifError* error)
     }
     if (node->right != NULL && node->right->type == NUM && node->right->value.number == 0)
     {
-        switch (OP[node->value.n_oper].op_enum)
+        switch (node->value.oper)
         {
             case MUL:
                 *change = true;
@@ -715,8 +665,8 @@ Node* nul_and_one (Node* node, bool* change, enum DifError* error)
                 return create_node (NUM, 0, NULL, NULL);
             case DIV:
                 *error = DIF_DIV_NUL;
-                return NULL;
-            case DEG:
+                return node;
+            case POW:
                 *change = true;
                 tree_dtor (node);
                 return create_node (NUM, 1, NULL, NULL);
@@ -726,19 +676,19 @@ Node* nul_and_one (Node* node, bool* change, enum DifError* error)
 
 }
 
-Node* swertka_const (Node* node, bool* change)
+Node* swertka_const (Node* node, bool* change, enum DifError* error)
 {
     if (node->left != NULL)
-        node->left = swertka_const (node->left, change);
+        node->left = swertka_const (node->left, change, error);
 
     if (node->right != NULL)
-        node->right = swertka_const (node->right, change);
+        node->right = swertka_const (node->right, change, error);
 
     if (node->left == NULL && node->right != NULL && node->right->type == NUM)
     {
         double val = NAN;
         Node* res = NULL;
-        switch (OP[node->value.n_oper].op_enum)
+        switch (node->value.oper)
         {
             case SIN:
                 *change = true;
@@ -752,6 +702,13 @@ Node* swertka_const (Node* node, bool* change)
                 return res;
             case LN:
                 *change = true;
+
+                if (node->right->value.number == 0)
+                {
+                    *error = DIF_LN_NUL;
+                    return node;
+                }
+
                 res = create_node (NUM, log (node->right->value.number), NULL, NULL);
                 tree_dtor (node);
                 return res;
@@ -772,7 +729,7 @@ Node* swertka_const (Node* node, bool* change)
         double val1 = node->left->value.number;
         double val2 = node->right->value.number;
         Node* res = NULL;
-        switch (OP[node->value.n_oper].op_enum)
+        switch (node->value.oper)
         {
             case ADD:
                 *change = true;
@@ -791,10 +748,17 @@ Node* swertka_const (Node* node, bool* change)
                 return res;
             case DIV:
                 *change = true;
+
+                if (val2 == 0)
+                {
+                    *error = DIF_DIV_NUL;
+                    return node;
+                }
+
                 res = create_node (NUM, val1 / val2, NULL, NULL);
                 tree_dtor (node);
                 return res;
-            case DEG:
+            case POW:
                 *change = true;
                 res = create_node (NUM, pow (val1, val2), NULL, NULL);
                 tree_dtor (node);
@@ -851,6 +815,15 @@ void taylor (Node* node, enum DifError* error)
             change_node = change_x0 (change_node, x0);
             prev_node = change_node;
             change_node = simplification (change_node, error);
+
+            if (*error != DIF_NO_ERROR)
+            {
+                printf ("\n%s\n", dif_get_error (*error));
+                tree_dtor (prev_node);
+                tree_dtor (node);
+                return;
+            }
+
             tree_dtor (prev_node);
             printf ("%lf * (x - %lf)^%d / %d + ", change_node->value.number, x0, i, fact (i));
             tree_dtor (change_node);
@@ -860,9 +833,11 @@ void taylor (Node* node, enum DifError* error)
         printf ("o (x - %lf)^%d\n", x0, n);
         printf ("It was difficult.\n");
     }
-
     else
-        printf ("Incorrect response. Goodbye!\n");
+    {
+        printf ("Goodbye!\n");
+        tree_dtor (node);
+    }
 }
 
 int fact (int n)
@@ -916,7 +891,7 @@ Node* get_g (enum DifError* error, struct Tokens* TOK, int* n_tok)
 Node* get_e (enum DifError* error, struct Tokens* TOK, int* n_tok)
 {
     Node* val = NULL;
-    if (TOK[*n_tok].type == OPER && TOK[*n_tok].elem.n_oper == SUB)
+    if (TOK[*n_tok].type == OPER && TOK[*n_tok].elem.oper == SUB)
     {
         (*n_tok)++;
 
@@ -924,8 +899,8 @@ Node* get_e (enum DifError* error, struct Tokens* TOK, int* n_tok)
         {
             *error = DIF_SYNTAX_ERROR;
             printf ("Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
-                    "Работа программы завершена досрочно :(\n", OP[TOK[*n_tok].elem.n_oper].name,
-                                                                OP[TOK[*n_tok - 1].elem.n_oper].name);
+                    "Работа программы завершена досрочно :(\n", get_oper_name (TOK[*n_tok].elem.oper),
+                                                                get_oper_name (TOK[*n_tok - 1].elem.oper));
             return create_node (OPER, ADD, val, NULL); // не разбираюсь, ADD или SUB,
                                                        // т.к. в любом случае надо удалять дерево
         }
@@ -936,8 +911,8 @@ Node* get_e (enum DifError* error, struct Tokens* TOK, int* n_tok)
     {
         val = get_t (error, TOK, n_tok);
     }
-    while (TOK[*n_tok].type == OPER && (OP[TOK[*n_tok].elem.n_oper].op_enum == ADD ||
-    OP[TOK[*n_tok].elem.n_oper].op_enum == SUB))
+    while (TOK[*n_tok].type == OPER && (TOK[*n_tok].elem.oper == ADD ||
+    TOK[*n_tok].elem.oper == SUB))
     {
         int old_n_tok = (*n_tok);
         (*n_tok)++;
@@ -946,14 +921,14 @@ Node* get_e (enum DifError* error, struct Tokens* TOK, int* n_tok)
         {
             *error = DIF_SYNTAX_ERROR;
             printf ("Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
-                    "Работа программы завершена досрочно :(\n", OP[TOK[*n_tok].elem.n_oper].name,
-                                                                OP[TOK[*n_tok - 1].elem.n_oper].name);
+                    "Работа программы завершена досрочно :(\n", get_oper_name (TOK[*n_tok].elem.oper),
+                                                                get_oper_name (TOK[*n_tok - 1].elem.oper));
             return create_node (OPER, ADD, val, NULL); // не разбираюсь, ADD или SUB,
                                                        // т.к. в любом случае надо удалять дерево
         }
 
         Node* val2 = get_t (error, TOK, n_tok);
-        if (OP[TOK[old_n_tok].elem.n_oper].op_enum == ADD)
+        if (TOK[old_n_tok].elem.oper == ADD)
             val = create_node (OPER, ADD, val, val2);
         else
             val = create_node (OPER, SUB, val, val2);
@@ -965,13 +940,13 @@ bool couple_mis_op (int n_tok, struct Tokens* TOK)
 {
     if (TOK[n_tok].type == OPER)
     {
-        switch (OP[TOK[n_tok].elem.n_oper].op_enum)
+        switch (TOK[n_tok].elem.oper)
         {
             case ADD:
             case SUB:
             case MUL:
             case DIV:
-            case DEG:
+            case POW:
                 return true;
         }
     }
@@ -981,7 +956,7 @@ bool couple_mis_op (int n_tok, struct Tokens* TOK)
 Node* get_k (enum DifError* error, struct Tokens* TOK, int* n_tok)
 {
     Node* val = get_p (error, TOK, n_tok);
-    if (TOK[*n_tok].type == OPER && OP[TOK[*n_tok].elem.n_oper].op_enum == DEG)
+    if (TOK[*n_tok].type == OPER && TOK[*n_tok].elem.oper == POW)
     {
         (*n_tok)++;
 
@@ -989,16 +964,16 @@ Node* get_k (enum DifError* error, struct Tokens* TOK, int* n_tok)
         {
             *error = DIF_SYNTAX_ERROR;
             printf ("Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
-                    "Работа программы завершена досрочно :(\n", OP[TOK[*n_tok].elem.n_oper].name,
-                                                                OP[TOK[*n_tok - 1].elem.n_oper].name);
+                    "Работа программы завершена досрочно :(\n", get_oper_name (TOK[*n_tok].elem.oper),
+                                                                get_oper_name (TOK[*n_tok - 1].elem.oper));
             return create_node (OPER, ADD, val, NULL); // не разбираюсь, ADD или SUB,
                                                        // т.к. в любом случае надо удалять дерево
         }
 
         Node* val2 = get_p (error, TOK, n_tok);
-        val = create_node (OPER, DEG, val, val2);
+        val = create_node (OPER, POW, val, val2);
 
-        if (TOK[*n_tok].type == OPER && OP[TOK[*n_tok].elem.n_oper].op_enum == DEG)
+        if (TOK[*n_tok].type == OPER && TOK[*n_tok].elem.oper == POW)
         {
             *error = DIF_SYNTAX_ERROR;
             printf ("Введено некорректное выражение: "
@@ -1012,7 +987,7 @@ Node* get_s (enum DifError* error, struct Tokens* TOK, int* n_tok)
 {
     if (TOK[*n_tok].type == OPER)
     {
-        int n_oper = TOK[*n_tok].elem.n_oper;
+        int n_oper = TOK[*n_tok].elem.oper;
         (*n_tok)++;
 
         if (TOK[*n_tok].type == TXT && TOK[*n_tok].elem.symb != '(')
@@ -1071,8 +1046,8 @@ Node* get_p (enum DifError* error, struct Tokens* TOK, int* n_tok)
 Node* get_t (enum DifError* error, struct Tokens* TOK, int* n_tok)
 {
     Node* val = get_s (error, TOK, n_tok);
-    while (TOK[*n_tok].type == OPER && (OP[TOK[*n_tok].elem.n_oper].op_enum == MUL
-    || OP[TOK[*n_tok].elem.n_oper].op_enum == DIV))
+    while (TOK[*n_tok].type == OPER && (TOK[*n_tok].elem.oper == MUL
+    || TOK[*n_tok].elem.oper == DIV))
     {
         int old_n_tok = *n_tok;
         (*n_tok)++;
@@ -1081,15 +1056,15 @@ Node* get_t (enum DifError* error, struct Tokens* TOK, int* n_tok)
         {
             *error = DIF_SYNTAX_ERROR;
             printf ("Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
-                    "Работа программы завершена досрочно :(\n", OP[TOK[*n_tok].elem.n_oper].name,
-                                                                OP[TOK[*n_tok - 1].elem.n_oper].name);
+                    "Работа программы завершена досрочно :(\n", get_oper_name (TOK[*n_tok].elem.oper),
+                                                                get_oper_name (TOK[*n_tok - 1].elem.oper));
             return create_node (OPER, ADD, val, NULL); // не разбираюсь, ADD или SUB,
                                                        // т.к. в любом случае надо удалять дерево
         }
 
         Node* val2 = get_s (error, TOK, n_tok);
 
-        if (OP[TOK[old_n_tok].elem.n_oper].op_enum == MUL)
+        if (TOK[old_n_tok].elem.oper == MUL)
             val = create_node (OPER, MUL, val, val2);
         else
             val = create_node (OPER, DIV, val, val2);

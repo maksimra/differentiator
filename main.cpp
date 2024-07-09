@@ -1,11 +1,19 @@
 #include "diff.h"
 
+const int MAX_N_VARS = 10;
+
 int main (const int argc, const char* argv[])
 {
-    const char* NAME = argv[1];
-    struct Vars VARS[10] = {};
-    enum DifError error = DIF_NO_ERROR;
+    enum DifError error = check_args (argc, argv);
 
+    if (error != DIF_NO_ERROR)
+    {
+        dif_print_error (error);
+        return 0;
+    }
+
+    const char* NAME = argv[1];
+    struct Vars VARS[MAX_N_VARS] = {};
 
     FILE* source = fopen (NAME, "r");
     FILE* log_file = fopen ("log_file.txt", "w");
@@ -17,33 +25,24 @@ int main (const int argc, const char* argv[])
 
     dif_set_log_file (log_file);
 
-
-    if (source == NULL || text_tree == NULL || g_viz == NULL || log_file == NULL)
+    if (text_tree == NULL || g_viz == NULL || log_file == NULL)
         error = DIF_ERROR_FOPEN;
 
     dif_print_error (error);
 
-
-    error = check_argc (argc, 2);
-    dif_print_error (error);
-
-
-    int size = 0;
+    size_t size = 0;
     error = read_file (NAME, &size);
     dif_print_error (error);
 
-
-    struct Tokens* TOK = (struct Tokens*) calloc ((size_t) size, sizeof (struct Tokens));
+    struct Tokens* TOK = (struct Tokens*) calloc (size, sizeof (struct Tokens));
 
     if (TOK == NULL)
         error = DIF_ERROR_CALLOC;
 
     dif_print_error (error);
 
-
-    error = token (TOK, VARS);
+    error = token (TOK, VARS, MAX_N_VARS);
     dif_print_error (error);
-
 
     int n_tok = 0;
     Node* root = get_g (&error, TOK, &n_tok);
@@ -56,17 +55,12 @@ int main (const int argc, const char* argv[])
         return 0;
     }
 
-
     error = graphviz (root, g_viz, VARS);
 
-
     int n_space = 0;
-    dif_tree_print_txt (root, text_tree, &n_space);
-
+    print_tree_txt_incr_tabs (root, text_tree, &n_space);
 
     taylor (root, &error);
-    dif_print_error (error);
-
 
     free (TOK);
     fclose (text_tree);
