@@ -51,7 +51,7 @@ int main (const int argc, const char* argv[])
     {
         if (root != NULL)
             tree_dtor (root);
-
+        free (TOK);
         return 0;
     }
 

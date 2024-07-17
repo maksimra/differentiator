@@ -30,17 +30,6 @@ union Elem
     int n_var;
 };
 
-struct Ops
-{
-    enum OPER op_enum;
-    int number;
-    const char* name;
-    size_t len;
-    Node* (*dif) (Node* node);
-    Node* (*smp) (Node* node);
-    Node* (*eval) (Node* node);
-    bool is_func;
-};
 
 struct Vars
 {
@@ -79,6 +68,7 @@ struct Node
     Node* right;
 };
 
+
 enum DifError
 {
     DIF_NO_ERROR,
@@ -98,21 +88,54 @@ enum DifError
     DIF_FGETS_ERROR,
     DIF_ERROR_x0,
     DIF_ERROR_N,
-    DIF_NODE_TYPE_ERROR
 };
+
+struct Ops
+{
+    enum OPER op_enum;
+    int number;
+    const char* name;
+    size_t len;
+    Node* (*dif) (const Node* node, enum DifError* error);
+    Node* (*eval) (Node* node, enum DifError* error);
+    /*Node* (*smp) (Node* node);
+    bool is_func;*/
+};
+
+Node* dif_add (const Node* node, enum DifError* error); // Node* smp_add  (Node* node); Node* eval_add  (Node* node);
+Node* dif_sub (const Node* node, enum DifError* error); // Node* smp_sub  (Node* node); Node* eval_sub  (Node* node);
+Node* dif_mul (const Node* node, enum DifError* error); // Node* smp_mul  (Node* node); Node* eval_mul  (Node* node);
+Node* dif_div (const Node* node, enum DifError* error); // Node* smp_div  (Node* node); Node* eval_div  (Node* node);
+Node* dif_sin (const Node* node, enum DifError* error); // Node* smp_sin  (Node* node); Node* eval_sin  (Node* node);
+Node* dif_cos (const Node* node, enum DifError* error); // Node* smp_cos  (Node* node); Node* eval_cos  (Node* node);
+Node* dif_ln (const Node* node, enum DifError* error); // Node* smp_ln   (Node* node); Node* eval_ln   (Node* node);
+Node* dif_sqrt (const Node* node, enum DifError* error); // Node* smp_sqrt (Node* node); Node* eval_sqrt (Node* node);
+Node* dif_pow (const Node* node, enum DifError* error); // Node* smp_pow  (Node* node); Node* eval_pow  (Node* node);
+Node* dif_exp (const Node* node, enum DifError* error); // Node* smp_exp  (Node* node); Node* eval_exp  (Node* node);
+Node* eval_add (Node* node, enum DifError* error);
+Node* eval_sub (Node* node, enum DifError* error);
+Node* eval_mul (Node* node, enum DifError* error);
+Node* eval_div (Node* node, enum DifError* error);
+Node* eval_pow (Node* node, enum DifError* error);
+Node* eval_sin  (Node* node, enum DifError* error);
+Node* eval_cos  (Node* node, enum DifError* error);
+Node* eval_ln (Node* node, enum DifError* error);
+Node* eval_sqrt (Node* node, enum DifError* error);
+Node* eval_exp  (Node* node, enum DifError* error);
+
 
 const struct Ops OP[] =
 {
-    {ADD,  0, "+",    1},
-    {SUB,  1, "-",    1},
-    {MUL,  2, "*",    1},
-    {DIV,  3, "/",    1},
-    {SIN,  4, "sin",  3},
-    {COS,  5, "cos",  3},
-    {LN,   6, "ln",   2},
-    {SQRT, 7, "sqrt", 4},
-    {POW,  8, "^",    1},
-    {EXP,  9, "exp",  3}
+    {ADD,  0, "+",    1, dif_add, eval_add},  //smp_add,  eval_add,  false},
+    {SUB,  1, "-",    1, dif_sub, eval_sub},  //smp_sub,  eval_sub,  false},
+    {MUL,  2, "*",    1, dif_mul, eval_mul},  //smp_mul,  eval_mul,  false},
+    {DIV,  3, "/",    1, dif_div, eval_div},  //smp_div,  eval_div,  false},
+    {SIN,  4, "sin",  3, dif_sin, eval_sin},  //smp_sin,  eval_sin,  true},
+    {COS,  5, "cos",  3, dif_cos, eval_cos},  //smp_cos,  eval_cos,  true},
+    {LN,   6, "ln",   2, dif_ln, eval_ln},   //smp_ln,   eval_ln,   true},
+    {SQRT, 7, "sqrt", 4, dif_sqrt, eval_sqrt}, //smp_sqrt, eval_sqrt, true},
+    {POW,  8, "^",    1, dif_pow, eval_pow},  //smp_pow,  eval_pow,  false},
+    {EXP,  9, "exp",  3, dif_exp, eval_exp}  //smp_exp,  eval_exp,  true}
 };
 
 const int N_FUNC = sizeof (OP) / sizeof (OP[0]);
@@ -131,14 +154,14 @@ void          dif_print_error          (enum DifError error);
 enum DifError check_argc               (const int argc, int necessary_n_arg);
 void          tree_dtor                (Node* root);
 Node*         copy                     (const Node* node);
-Node*         create_node              (enum Type type, double value, Node* left, Node* right);
+Node*         create_node              (enum Type type, double value, Node* left, Node* right, enum DifError* error);
 enum DifError graphviz                 (Node* node, FILE* file, struct Vars* VARS);
 void          print_start              (FILE* file);
 void          print_end                (FILE* file);
 void          print_connections            (Node* node, FILE* file, struct Vars* VARS);
 void          draw_right               (Node* node, FILE* file, struct Vars* VARS);
 void          draw_left                (Node* node, FILE* file, struct Vars* VARS);
-Node*         diff                     (const Node* node);
+Node*         diff                     (const Node* node, enum DifError* error);
 enum DifError read_file                (const char* NAME, size_t* size);
 int           search_var               (void);
 enum DifError token                    (struct Tokens* TOK, struct Vars* VARS, int MAX_N_VARS);
@@ -162,3 +185,4 @@ Node*         change_x0                (Node* node, double x0);
 bool          couple_mis_op            (int n_tok, struct Tokens* TOK);
 const char*   get_oper_name            (enum OPER oper);
 enum DifError check_args               (const int argc, const char* argv[]);
+bool          compare_doubles          (double a, double b);
