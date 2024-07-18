@@ -1,4 +1,4 @@
-#include "diff.h"
+#include "../include/diff.h"
 
 const int necessary_n_args = 2;
 

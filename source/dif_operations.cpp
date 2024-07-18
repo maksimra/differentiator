@@ -1,4 +1,4 @@
-#include "diff.h"
+#include "../include/diff.h"
 
 #define DL diff (node->left, error)
 #define DR diff (node->right, error)
@@ -122,12 +122,6 @@ Node* eval_add  (Node* node, enum DifError* error)
     Node* res = create_node (NUM, LEFT_NUM + RIGHT_NUM, NULL, NULL, error);
     tree_dtor (node);
     return res;
-
-    /*node->type = NUM;
-    node->value.number = LEFT_NUM + RIGHT_NUM;
-    tree_dtor (node->left);
-    tree_dtor(node->right);
-    return node;*/
 }
 Node* eval_sub  (Node* node, enum DifError* error)
 {
@@ -189,21 +183,113 @@ Node* eval_sqrt (Node* node, enum DifError* error)
     tree_dtor (node);
     return res;
 }
-Node* eval_exp  (Node* node, enum DifError* error)
+Node* eval_exp (Node* node, enum DifError* error)
 {
     Node* res = create_node (NUM, exp (RIGHT_NUM), NULL, NULL, error);
     tree_dtor (node);
     return res;
 }
-/*
-Node* smp_add  (Node* node);
-;
-; Node* smp_sub  (Node* node); ;
-; Node* smp_mul  (Node* node); ;
-; Node* smp_div  (Node* node); ;
-; Node* smp_sin  (Node* node); ;
-; Node* smp_cos  (Node* node); ;
-; Node* smp_ln   (Node* node); ;
-; Node* smp_sqrt (Node* node); ;
-; Node* smp_pow  (Node* node); ;
-; Node* smp_exp  (Node* node); ;*/
+Node* smp_add (Node* node, bool*, enum DifError*)
+{
+    return node;
+}
+Node* smp_sub (Node* node, bool*, enum DifError*)
+{
+    return node;
+}
+Node* smp_mul (Node* node, bool* change, enum DifError* error)
+{
+    if (node->left != NULL && node->left->type == NUM && compare_doubles (LEFT_NUM, 1))
+    {
+        *change = true;
+        Node* res = copy (node->right);
+        tree_dtor (node);
+        return res;
+    }
+    if (node->right != NULL && node->right->type == NUM && compare_doubles (RIGHT_NUM, 1))
+    {
+        *change = true;
+        Node* res = copy (node->left);
+        tree_dtor (node);
+        return res;
+    }
+    if ((node->left != NULL && node->left->type == NUM && compare_doubles (LEFT_NUM, 0)) ||
+        (node->right != NULL && node->right->type == NUM && compare_doubles (RIGHT_NUM, 0)))
+    {
+        *change = true;
+        tree_dtor (node);
+        return create_node (NUM, 0, NULL, NULL, error);
+    }
+    return node;
+}
+Node* smp_div (Node* node, bool* change, enum DifError* error)
+{
+    if (node->right != NULL && node->right->type == NUM && compare_doubles (RIGHT_NUM, 1))
+    {
+        *change = true;
+        Node* res = copy (node->left);
+        tree_dtor (node);
+        return res;
+    }
+    if (node->left != NULL && node->left->type == NUM && compare_doubles (LEFT_NUM, 0))
+    {
+        *change = true;
+        tree_dtor (node);
+        return create_node (NUM, 0, NULL, NULL, error);
+    }
+    if (node->right != NULL && node->right->type == NUM && compare_doubles (RIGHT_NUM, 0))
+    {
+        *error = DIF_DIV_NUL;
+        return node;
+    }
+    return node;
+}
+Node* smp_sin (Node* node, bool*, enum DifError*)
+{
+    return node;
+}
+Node* smp_cos (Node* node, bool*, enum DifError*)
+{
+    return node;
+}
+Node* smp_ln (Node* node, bool*, enum DifError*)
+{
+    return node;
+}
+Node* smp_sqrt (Node* node, bool*, enum DifError*)
+{
+    return node;
+}
+Node* smp_exp (Node* node, bool*, enum DifError*)
+{
+    return node;
+}
+Node* smp_pow  (Node* node, bool* change, enum DifError* error)
+{
+    if (node->left != NULL && node->left->type == NUM && compare_doubles (LEFT_NUM, 1))
+    {
+        *change = true;
+        tree_dtor (node);
+        return create_node (NUM, 1, NULL, NULL, error);
+    }
+    if (node->right != NULL && node->right->type == NUM && compare_doubles (RIGHT_NUM, 1))
+    {
+        *change = true;
+        Node* res = copy (node->left);
+        tree_dtor (node);
+        return res;
+    }
+    if (node->left != NULL && node->left->type == NUM && compare_doubles (LEFT_NUM, 0))
+    {
+        *change = true;
+        tree_dtor (node);
+        return create_node (NUM, 0, NULL, NULL, error);
+    }
+    if (node->right != NULL && node->right->type == NUM && compare_doubles (RIGHT_NUM, 0))
+    {
+        *change = true;
+        tree_dtor (node);
+        return create_node (NUM, 1, NULL, NULL, error);
+    }
+    return node;
+}

@@ -1,4 +1,4 @@
-#include "diff.h"
+#include "../include/diff.h"
 
 static FILE* log_file = stderr;
 
@@ -8,7 +8,7 @@ char* s = NULL;
 
 static const int OPER_N_SYMB = 10;
 
-static const int FOR_ANSW = 10;
+static const int FOR_ANSW = 10; //
 
 static const int YES_NO_LEN = 4;
 
@@ -316,7 +316,7 @@ const char* dif_get_error (enum DifError error)
             return "Dif: Ошибка работы функции strtod.";
         case DIF_ERROR_ARGC:
             return "Dif: Введено некорректное число аргументов. "
-                   "Введите \"./do name_file.txt\".";
+                   "Введите \"./output name_file.txt\".";
         case DIF_ERROR_ARGV:
             return "Dif: Введено некорректное имя файла.";
         case DIF_ERROR_FOPEN:
@@ -526,66 +526,10 @@ Node* nul_and_one (Node* node, bool* change, enum DifError* error)
     if (node->right != NULL)
         node->right = nul_and_one (node->right, change, error);
 
-    if (node->left != NULL && node->left->type == NUM && compare_doubles (node->left->value.number, 1))
-    {
-        Node* res = NULL;
-        switch (node->value.oper)
-        {
-            case MUL:
-                *change = true;
-                res = copy (node->right);
-                tree_dtor (node);
-                return res;
-            case POW:
-                *change = true;
-                tree_dtor (node);
-                return create_node (NUM, 1, NULL, NULL, error);
-        }
-    }
-    if (node->right != NULL && node->right->type == NUM && node->right->value.number == 1)
-    {
-        switch (node->value.oper)
-        {
-            case MUL:
-            case DIV:
-            case POW:
-                *change = true;
-                Node* res = copy (node->left);
-                tree_dtor (node);
-                return res;
-        }
-    }
-    if (node->left != NULL && node->left->type == NUM && node->left->value.number == 0)
-    {
-        switch (node->value.oper)
-        {
-            case MUL:
-            case DIV:
-            case POW:
-                *change = true;
-                tree_dtor (node);
-                return create_node (NUM, 0, NULL, NULL, error);
-        }
-    }
-    if (node->right != NULL && node->right->type == NUM && node->right->value.number == 0)
-    {
-        switch (node->value.oper)
-        {
-            case MUL:
-                *change = true;
-                tree_dtor (node);
-                return create_node (NUM, 0, NULL, NULL, error);
-            case DIV:
-                *error = DIF_DIV_NUL;
-                return node;
-            case POW:
-                *change = true;
-                tree_dtor (node);
-                return create_node (NUM, 1, NULL, NULL, error);
-        }
-    }
-    return node;
+    if (node->type == OPER)
+        return OP[(int) node->value.oper].smp(node, change, error);
 
+    return node;
 }
 
 Node* swertka_const (Node* node, bool* change, enum DifError* error)
@@ -598,9 +542,11 @@ Node* swertka_const (Node* node, bool* change, enum DifError* error)
 
     if (node->left == NULL && node->right != NULL && node->right->type == NUM ||
         node->left != NULL && node->left->type == NUM && node->right->type == NUM)
-
+    {
+        *change = true;
         return OP[(int) node->value.oper].eval(node, error);
-        
+    }
+
     return node;
 }
 

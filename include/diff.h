@@ -98,20 +98,20 @@ struct Ops
     size_t len;
     Node* (*dif) (const Node* node, enum DifError* error);
     Node* (*eval) (Node* node, enum DifError* error);
-    /*Node* (*smp) (Node* node);
-    bool is_func;*/
+    Node* (*smp) (Node* node, bool* change, enum DifError* error);
+    // bool is_func;*/
 };
 
-Node* dif_add (const Node* node, enum DifError* error); // Node* smp_add  (Node* node); Node* eval_add  (Node* node);
-Node* dif_sub (const Node* node, enum DifError* error); // Node* smp_sub  (Node* node); Node* eval_sub  (Node* node);
-Node* dif_mul (const Node* node, enum DifError* error); // Node* smp_mul  (Node* node); Node* eval_mul  (Node* node);
-Node* dif_div (const Node* node, enum DifError* error); // Node* smp_div  (Node* node); Node* eval_div  (Node* node);
-Node* dif_sin (const Node* node, enum DifError* error); // Node* smp_sin  (Node* node); Node* eval_sin  (Node* node);
-Node* dif_cos (const Node* node, enum DifError* error); // Node* smp_cos  (Node* node); Node* eval_cos  (Node* node);
-Node* dif_ln (const Node* node, enum DifError* error); // Node* smp_ln   (Node* node); Node* eval_ln   (Node* node);
-Node* dif_sqrt (const Node* node, enum DifError* error); // Node* smp_sqrt (Node* node); Node* eval_sqrt (Node* node);
-Node* dif_pow (const Node* node, enum DifError* error); // Node* smp_pow  (Node* node); Node* eval_pow  (Node* node);
-Node* dif_exp (const Node* node, enum DifError* error); // Node* smp_exp  (Node* node); Node* eval_exp  (Node* node);
+Node* dif_add (const Node* node, enum DifError* error);
+Node* dif_sub (const Node* node, enum DifError* error);
+Node* dif_mul (const Node* node, enum DifError* error);
+Node* dif_div (const Node* node, enum DifError* error);
+Node* dif_sin (const Node* node, enum DifError* error);
+Node* dif_cos (const Node* node, enum DifError* error);
+Node* dif_ln (const Node* node, enum DifError* error);
+Node* dif_sqrt (const Node* node, enum DifError* error);;
+Node* dif_pow (const Node* node, enum DifError* error);
+Node* dif_exp (const Node* node, enum DifError* error);
 Node* eval_add (Node* node, enum DifError* error);
 Node* eval_sub (Node* node, enum DifError* error);
 Node* eval_mul (Node* node, enum DifError* error);
@@ -122,20 +122,31 @@ Node* eval_cos  (Node* node, enum DifError* error);
 Node* eval_ln (Node* node, enum DifError* error);
 Node* eval_sqrt (Node* node, enum DifError* error);
 Node* eval_exp  (Node* node, enum DifError* error);
+Node* smp_add (Node* node, bool* change, enum DifError* error);
+Node* smp_sub (Node* node, bool* change, enum DifError* error);
+Node* smp_mul (Node* node, bool* change, enum DifError* error);
+Node* smp_div (Node* node, bool* change, enum DifError* error);
+Node* smp_sin (Node* node, bool* change, enum DifError* error);
+Node* smp_cos (Node* node, bool* change, enum DifError* error);
+Node* smp_ln (Node* node, bool* change, enum DifError* error);
+Node* smp_sqrt (Node* node, bool* change, enum DifError* error);
+Node* smp_exp (Node* node, bool* change, enum DifError* error);
+Node* smp_pow  (Node* node, bool* change, enum DifError* error);
+
 
 
 const struct Ops OP[] =
 {
-    {ADD,  0, "+",    1, dif_add, eval_add},  //smp_add,  eval_add,  false},
-    {SUB,  1, "-",    1, dif_sub, eval_sub},  //smp_sub,  eval_sub,  false},
-    {MUL,  2, "*",    1, dif_mul, eval_mul},  //smp_mul,  eval_mul,  false},
-    {DIV,  3, "/",    1, dif_div, eval_div},  //smp_div,  eval_div,  false},
-    {SIN,  4, "sin",  3, dif_sin, eval_sin},  //smp_sin,  eval_sin,  true},
-    {COS,  5, "cos",  3, dif_cos, eval_cos},  //smp_cos,  eval_cos,  true},
-    {LN,   6, "ln",   2, dif_ln, eval_ln},   //smp_ln,   eval_ln,   true},
-    {SQRT, 7, "sqrt", 4, dif_sqrt, eval_sqrt}, //smp_sqrt, eval_sqrt, true},
-    {POW,  8, "^",    1, dif_pow, eval_pow},  //smp_pow,  eval_pow,  false},
-    {EXP,  9, "exp",  3, dif_exp, eval_exp}  //smp_exp,  eval_exp,  true}
+    {ADD,  0, "+",    1, dif_add, eval_add, smp_add},
+    {SUB,  1, "-",    1, dif_sub, eval_sub, smp_sub},
+    {MUL,  2, "*",    1, dif_mul, eval_mul, smp_mul},
+    {DIV,  3, "/",    1, dif_div, eval_div, smp_div},
+    {SIN,  4, "sin",  3, dif_sin, eval_sin, smp_div},
+    {COS,  5, "cos",  3, dif_cos, eval_cos, smp_cos},
+    {LN,   6, "ln",   2, dif_ln, eval_ln, smp_ln},
+    {SQRT, 7, "sqrt", 4, dif_sqrt, eval_sqrt, smp_sqrt},
+    {POW,  8, "^",    1, dif_pow, eval_pow, smp_pow},
+    {EXP,  9, "exp",  3, dif_exp, eval_exp, smp_exp}  
 };
 
 const int N_FUNC = sizeof (OP) / sizeof (OP[0]);

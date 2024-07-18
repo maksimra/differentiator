@@ -1,4 +1,4 @@
-#include "../include/diff.h"
+#include "include/diff.h"
 
 const int MAX_N_VARS = 10;
 
