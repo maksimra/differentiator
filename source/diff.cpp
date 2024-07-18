@@ -540,8 +540,8 @@ Node* swertka_const (Node* node, bool* change, enum DifError* error)
     if (node->right != NULL)
         node->right = swertka_const (node->right, change, error);
 
-    if (node->left == NULL && node->right != NULL && node->right->type == NUM ||
-        node->left != NULL && node->left->type == NUM && node->right->type == NUM)
+    if ((node->left == NULL && node->right != NULL && node->right->type == NUM) ||
+        (node->left != NULL && node->left->type == NUM && node->right->type == NUM))
     {
         *change = true;
         return OP[(int) node->value.oper].eval(node, error);
@@ -712,17 +712,9 @@ Node* get_e (enum DifError* error, struct Tokens* TOK, int* n_tok)
 bool couple_mis_op (int n_tok, struct Tokens* TOK)
 {
     if (TOK[n_tok].type == OPER)
-    {
-        switch (TOK[n_tok].elem.oper)
-        {
-            case ADD:
-            case SUB:
-            case MUL:
-            case DIV:
-            case POW:
-                return true;
-        }
-    }
+        if (!OP[(int) TOK[n_tok].elem.oper].is_func)
+            return true;
+
     return false;
 }
 
@@ -806,6 +798,11 @@ Node* get_s (enum DifError* error, struct Tokens* TOK, int* n_tok)
             case EXP:
                 val = create_node (OPER, EXP, NULL, val, error);
                 return val;
+            case ADD:
+            case SUB:
+            case MUL:
+            case DIV:
+            case POW:
             default:
                 *error = DIF_FUNC_ERROR;
         }

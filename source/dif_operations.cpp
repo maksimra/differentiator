@@ -189,12 +189,14 @@ Node* eval_exp (Node* node, enum DifError* error)
     tree_dtor (node);
     return res;
 }
-Node* smp_add (Node* node, bool*, enum DifError*)
+Node* smp_add (Node* node, bool*, enum DifError* error)
 {
+    *error = DIF_NO_ERROR;
     return node;
 }
-Node* smp_sub (Node* node, bool*, enum DifError*)
+Node* smp_sub (Node* node, bool*, enum DifError* error)
 {
+    *error = DIF_NO_ERROR;
     return node;
 }
 Node* smp_mul (Node* node, bool* change, enum DifError* error)
@@ -244,24 +246,29 @@ Node* smp_div (Node* node, bool* change, enum DifError* error)
     }
     return node;
 }
-Node* smp_sin (Node* node, bool*, enum DifError*)
+Node* smp_sin (Node* node, bool*, enum DifError* error)
 {
+    *error = DIF_NO_ERROR;
     return node;
 }
-Node* smp_cos (Node* node, bool*, enum DifError*)
+Node* smp_cos (Node* node, bool*, enum DifError* error)
 {
+    *error = DIF_NO_ERROR;
     return node;
 }
-Node* smp_ln (Node* node, bool*, enum DifError*)
+Node* smp_ln (Node* node, bool*, enum DifError* error)
 {
+    *error = DIF_NO_ERROR;
     return node;
 }
-Node* smp_sqrt (Node* node, bool*, enum DifError*)
+Node* smp_sqrt (Node* node, bool*, enum DifError* error)
 {
+    *error = DIF_NO_ERROR;
     return node;
 }
-Node* smp_exp (Node* node, bool*, enum DifError*)
+Node* smp_exp (Node* node, bool*, enum DifError* error)
 {
+    *error = DIF_NO_ERROR;
     return node;
 }
 Node* smp_pow  (Node* node, bool* change, enum DifError* error)
