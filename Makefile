@@ -1,3 +1,5 @@
+.PHONY: output clean
+
 BUILD := objects
 
 FLAGS := -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ \
@@ -21,8 +23,8 @@ FLAGS := -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ \
 		 null,object-size,return,returns-nonnull-attribute,shift,$\
 		 signed-integer-overflow,undefined,unreachable,vla-bound,vptr
 
-output: $(BUILD)/check_args.o $(BUILD)/dif_operations.o $(BUILD)/diff.o $(BUILD)/main.o
-	@g++ $(BUILD)/check_args.o $(BUILD)/dif_operations.o $(BUILD)/diff.o $(BUILD)/main.o $(FLAGS) -o $(BUILD)/output
+output: $(BUILD)/check_args.o $(BUILD)/dif_operations.o $(BUILD)/diff.o $(BUILD)/taylor.o
+	@g++ $(BUILD)/check_args.o $(BUILD)/dif_operations.o $(BUILD)/diff.o $(BUILD)/taylor.o $(FLAGS) -o $(BUILD)/output
 
 $(BUILD)/check_args.o: source/check_args.cpp include/diff.h
 	@g++ $(FLAGS) -c source/check_args.cpp -o $(BUILD)/check_args.o
@@ -33,8 +35,8 @@ $(BUILD)/dif_operations.o: source/dif_operations.cpp include/diff.h
 $(BUILD)/diff.o: source/diff.cpp include/diff.h
 	@g++ $(FLAGS) -c source/diff.cpp -o $(BUILD)/diff.o
 
-$(BUILD)/main.o: source/main.cpp include/diff.h
-	@g++ $(FLAGS) -c source/main.cpp -o $(BUILD)/main.o
+$(BUILD)/taylor.o: taylor.cpp include/diff.h
+	@g++ $(FLAGS) -c taylor.cpp -o $(BUILD)/taylor.o
 
 clean:
 	rm $(BUILD)/*.o $(BUILD)/output
