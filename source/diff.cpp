@@ -59,16 +59,6 @@ int search_oper (const char* str, size_t len)
     return -1;
 }
 
-size_t count_space (const char* line)
-{
-    size_t n_space = 0;
-    while (isspace (*(line + n_space)))
-    {
-        n_space++;
-    }
-    return n_space;
-}
-
 void printf_str (FILE* file, const Node* node, int n_space)
 {
     if (node->type == OPER)
@@ -107,15 +97,6 @@ void print_tree_txt_incr_tabs (Node* node, FILE* file, int* n_space)
     print_node_or_decr_tabs (node->right, file, n_space);
 
     fprintf (file, ")\n");
-}
-
-enum DifError allocate_node (Node** node)
-{
-    Node* temp = (Node*) calloc (1, sizeof (Node));
-    if (temp == NULL)
-        return DIF_ERROR_CALLOC;
-    *node = temp;
-    return DIF_NO_ERROR;
 }
 
 void tree_dtor (Node* root)
@@ -287,7 +268,7 @@ enum DifError token (struct Tokens* TOK, struct Vars* VARS, int MAX_N_VARS)
 
         if (is_alpha == true)
         {
-            int n_oper = dif_search_func (start_pos, (size_t) (s - start_pos));
+            int n_oper = search_oper (start_pos, (size_t) (s - start_pos));
             if (n_oper == -1)
             {
                 assert (n_var < MAX_N_VARS);
@@ -374,24 +355,12 @@ void tokin_dump (struct Tokens* TOK, int n_tok, struct Vars* VARS)
     }
 }
 
-int dif_search_func (const char* name, size_t len)
-{
-    for (int i = 0; i < N_FUNC; i++)
-    {
-        if (strncmp (name, OP[i].name, len) == 0)
-            return i;
-    }
-    return -1;
-}
-
-
 void skip_space (char** str)
 {
     while (isspace(**str))
         (*str)++;
 }
 
-//========================================
 
 Node* simplification (Node* node, enum DifError* error)
 {
@@ -400,7 +369,7 @@ Node* simplification (Node* node, enum DifError* error)
     do
     {
         change_this_time = false;
-        c_node = swertka_const (c_node, &change_this_time, error);
+        c_node = count_const (c_node, &change_this_time, error);
 
         if (*error != DIF_NO_ERROR)
         {
@@ -408,7 +377,7 @@ Node* simplification (Node* node, enum DifError* error)
             return NULL;
         }
 
-        c_node = nul_and_one (c_node, &change_this_time, error);
+        c_node = zeros_and_ones (c_node, &change_this_time, error);
 
         if (*error != DIF_NO_ERROR)
         {
@@ -421,13 +390,13 @@ Node* simplification (Node* node, enum DifError* error)
     return c_node;
 }
 
-Node* nul_and_one (Node* node, bool* change, enum DifError* error)
+Node* zeros_and_ones (Node* node, bool* change, enum DifError* error)
 {
     if (node->left != NULL)
-        node->left = nul_and_one (node->left, change, error);
+        node->left = zeros_and_ones (node->left, change, error);
 
     if (node->right != NULL)
-        node->right = nul_and_one (node->right, change, error);
+        node->right = zeros_and_ones (node->right, change, error);
 
     if (node->type == OPER)
         return OP[(int) node->value.oper].smp(node, change, error);
@@ -435,13 +404,13 @@ Node* nul_and_one (Node* node, bool* change, enum DifError* error)
     return node;
 }
 
-Node* swertka_const (Node* node, bool* change, enum DifError* error)
+Node* count_const (Node* node, bool* change, enum DifError* error)
 {
     if (node->left != NULL)
-        node->left = swertka_const (node->left, change, error);
+        node->left = count_const (node->left, change, error);
 
     if (node->right != NULL)
-        node->right = swertka_const (node->right, change, error);
+        node->right = count_const (node->right, change, error);
 
     if ((node->left == NULL && node->right != NULL && node->right->type == NUM) ||
         (node->left != NULL && node->left->type == NUM && node->right->type == NUM))

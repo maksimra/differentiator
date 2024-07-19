@@ -151,10 +151,6 @@ const struct Ops OP[] =
 
 const int N_FUNC = sizeof (OP) / sizeof (OP[0]);
 
-enum DifError create_tree              (char* buffer, Node** cur_node, int* pos);
-enum DifError dif_read_tree            (FILE* file, const char* NAME, Node** root);
-size_t        count_space              (const char* line);
-enum DifError allocate_node            (Node** node);
 int           search_oper              (const char* str, size_t len);
 void          print_tree_txt_incr_tabs (Node* node, FILE* file, int* n_space);
 void          print_node_or_decr_tabs  (Node* node, FILE* file, int* n_space);
@@ -177,7 +173,6 @@ enum DifError read_file                (const char* NAME, size_t* size);
 int           search_var               (void);
 enum DifError token                    (struct Tokens* TOK, struct Vars* VARS, int MAX_N_VARS);
 void          skip_space               (char** str);
-int           dif_search_func          (const char* name, size_t len);
 void          tokin_dump               (struct Tokens* TOK, int n_tok, struct Vars* VARS);
 Node*         get_g                    (enum DifError* error, struct Tokens* TOK, int* n_tok);
 Node*         get_e                    (enum DifError* error, struct Tokens* TOK, int* n_tok);
@@ -187,8 +182,8 @@ Node*         get_p                    (enum DifError* error, struct Tokens* TOK
 Node*         get_t                    (enum DifError* error, struct Tokens* TOK, int* n_tok);
 Node*         get_n                    (enum DifError* error, struct Tokens* TOK, int* n_tok);
 Node*         simplification           (Node* node, enum DifError* error);
-Node*         nul_and_one              (Node* node, bool* change, enum DifError* error);
-Node*         swertka_const            (Node* node, bool* change, enum DifError* error);
+Node*         zeros_and_ones           (Node* node, bool* change, enum DifError* error);
+Node*         count_const              (Node* node, bool* change, enum DifError* error);
 void          taylor                   (Node* node, enum DifError* error);
 int           fact                     (int n);
 Node*         n_diff                   (Node* node, int i);
