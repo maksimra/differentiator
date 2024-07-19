@@ -1,4 +1,4 @@
-#include "include/diff.h"
+#include "include/parser.h"
 
 const int MAX_N_VARS = 10;
 
@@ -45,7 +45,7 @@ int main (const int argc, const char* argv[])
     dif_print_error (error);
 
     int n_tok = 0;
-    Node* root = get_g (&error, TOK, &n_tok);
+    Node* root = parse (&error, TOK, &n_tok);
 
     if (error != DIF_NO_ERROR)
     {
