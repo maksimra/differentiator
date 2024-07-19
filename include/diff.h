@@ -196,4 +196,3 @@ Node*         change_x0                (Node* node, double x0);
 bool          couple_mis_op            (int n_tok, struct Tokens* TOK);
 const char*   get_oper_name            (enum OPER oper);
 enum DifError check_args               (const int argc, const char* argv[]);
-bool          compare_doubles          (double a, double b);

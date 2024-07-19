@@ -1,4 +1,5 @@
 #include "../include/diff.h"
+#include "../include/comp_doub.h"
 
 #define DL diff (node->left, error)
 #define DR diff (node->right, error)
