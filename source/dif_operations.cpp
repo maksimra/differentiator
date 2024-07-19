@@ -2,8 +2,8 @@
 
 #define DL diff (node->left, error)
 #define DR diff (node->right, error)
-#define CL copy (node->left)
-#define CR copy (node->right)
+#define CL copy (node->left, error)
+#define CR copy (node->right, error)
 #define LEFT_NUM node->left->value.number
 #define RIGHT_NUM node->right->value.number
 
@@ -68,7 +68,7 @@ Node* dif_ln   (const Node* node, enum DifError* error)
 }
 Node* dif_sqrt (const Node* node, enum DifError* error)
 {
-    Node* cu = copy (node);
+    Node* cu = copy (node, error);
     Node* v = create_node (OPER, MUL, create_node (NUM, 2, NULL, NULL, error), cu, error);
     Node* h = create_node (OPER, DIV, create_node (NUM, 1, NULL, NULL, error), v, error);
     Node* dv = DR;
@@ -91,7 +91,7 @@ Node* dif_pow  (const Node* node, enum DifError* error)
     }
     else if (node->left->type == NUM)
     {
-        Node* cu = copy (node);
+        Node* cu = copy (node, error);
         Node* du = DR;
         Node* ln_num = create_node (OPER, LN, NULL, node->left, error);
         return create_node (OPER, MUL, cu,
@@ -105,9 +105,9 @@ Node* dif_pow  (const Node* node, enum DifError* error)
         Node* dv = DR;
         Node* res1 = create_node (OPER, MUL, dv, create_node (OPER, LN, NULL, cu, error), error);
         Node* res2 = create_node (OPER, MUL, du, cv, error);
-        Node* res3 = create_node (OPER, DIV, res2, copy (cu), error);
+        Node* res3 = create_node (OPER, DIV, res2, copy (cu, error), error);
         Node* res4 = create_node (OPER, ADD, res1, res3, error);
-        Node* res5 = create_node (OPER, POW, copy (cu), copy (cv), error);
+        Node* res5 = create_node (OPER, POW, copy (cu, error), copy (cv, error), error);
         return create_node (OPER, MUL, res5, res4, error);
     }
 }
@@ -204,14 +204,14 @@ Node* smp_mul (Node* node, bool* change, enum DifError* error)
     if (node->left != NULL && node->left->type == NUM && compare_doubles (LEFT_NUM, 1))
     {
         *change = true;
-        Node* res = copy (node->right);
+        Node* res = copy (node->right, error);
         tree_dtor (node);
         return res;
     }
     if (node->right != NULL && node->right->type == NUM && compare_doubles (RIGHT_NUM, 1))
     {
         *change = true;
-        Node* res = copy (node->left);
+        Node* res = copy (node->left, error);
         tree_dtor (node);
         return res;
     }
@@ -229,7 +229,7 @@ Node* smp_div (Node* node, bool* change, enum DifError* error)
     if (node->right != NULL && node->right->type == NUM && compare_doubles (RIGHT_NUM, 1))
     {
         *change = true;
-        Node* res = copy (node->left);
+        Node* res = copy (node->left, error);
         tree_dtor (node);
         return res;
     }
@@ -282,7 +282,7 @@ Node* smp_pow  (Node* node, bool* change, enum DifError* error)
     if (node->right != NULL && node->right->type == NUM && compare_doubles (RIGHT_NUM, 1))
     {
         *change = true;
-        Node* res = copy (node->left);
+        Node* res = copy (node->left, error);
         tree_dtor (node);
         return res;
     }

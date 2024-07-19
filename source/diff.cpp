@@ -8,22 +8,11 @@ char* s = NULL;
 
 static const int OPER_N_SYMB = 10;
 
-static const int FOR_ANSW = 10; //
+static const int FOR_ANSW = 10;
 
 static const int YES_NO_LEN = 4;
 
-static const double ACCURACY = 1e-5;
-
 static const int N_OPERS = sizeof (OP) / sizeof (OP[0]);
-
-
-bool compare_doubles (double a, double b)
-{
-    if (fabs (a - b) < ACCURACY)
-        return true;
-
-    return false;
-}
 
 enum DifError dif_set_log_file (FILE* file)
 {
@@ -131,6 +120,8 @@ enum DifError allocate_node (Node** node)
 
 void tree_dtor (Node* root)
 {
+    assert (root != NULL);
+
     if (root->left != NULL)
         tree_dtor (root->left);
 
@@ -138,99 +129,6 @@ void tree_dtor (Node* root)
         tree_dtor (root->right);
 
     free (root);
-}
-
-enum DifError graphviz (Node* node, FILE* file, struct Vars* VARS)
-{
-    assert (node != NULL);
-    assert (file != NULL);
-
-    print_start (file);
-
-    print_connections (node, file, VARS);
-
-    print_end (file);
-    fclose (file);
-
-    const char* cmd = "dot graphviz.txt -Tsvg -otree.svg";
-    system (cmd);
-    return DIF_NO_ERROR;
-}
-
-void print_start (FILE* file)
-{
-    fprintf (file, "graph G {\n");
-}
-
-void print_end (FILE* file)
-{
-    fprintf (file, "}");
-}
-
-void print_connections (Node* node, FILE* file, struct Vars* VARS)
-{
-    draw_left (node, file, VARS);
-    draw_right (node, file, VARS);
-}
-
-void draw_right (Node* node, FILE* file, struct Vars* VARS)
-{
-    char* color = NULL;
-    assert (file != NULL);
-    if (node->right != NULL)
-    {
-        if (node->right->left == NULL && node->right->right == NULL)
-            color = strdup ("red"); // sprintf and snprintf
-        else
-            color = strdup ("green");
-        if (node->right->type == OPER)
-        {
-            fprintf (file, "{\"%s\n%p\"--\"%s\n%p\"[color = \"%s\"]};\n",
-            get_oper_name (node->value.oper), node, get_oper_name (node->right->value.oper), node->right, color);
-        }
-        else if (node->right->type == NUM)
-        {
-            fprintf (file, "{\"%s\n%p\"--\"%.3lf\n%p\"[color = \"%s\"]};\n",
-            get_oper_name (node->value.oper), node, node->right->value.number, node->right, color);
-        }
-        else if (node->right->type == VAR)
-        {
-            fprintf (file, "{\"%s\n%p\"--\"%.*s\n%p\"[color = \"%s\"]};\n",
-            get_oper_name (node->value.oper), node, (int) VARS[node->right->value.n_var].len, VARS[node->right->value.n_var].name, node->right, color);
-        }
-
-        print_connections (node->right, file, VARS);
-    }
-    free (color);
-}
-
-void draw_left (Node* node, FILE* file, struct Vars* VARS)
-{
-    char* color = NULL;
-    if (node->left != NULL)
-    {
-        if (node->left->left == NULL && node->left->right == NULL)
-            color = strdup ("red"); // sprintf and snprintf
-        else
-            color = strdup ("green");
-        if (node->left->type == OPER)
-        {
-            fprintf (file, "{\"%s\n%p\"--\"%s\n%p\"[color = \"%s\"]};\n",
-            get_oper_name (node->value.oper), node, get_oper_name (node->left->value.oper), node->left, color);
-        }
-        else if (node->left->type == NUM)
-        {
-            fprintf (file, "{\"%s\n%p\"--\"%.3lf\n%p\"[color = \"%s\"]};\n",
-            get_oper_name (node->value.oper), node, node->left->value.number, node->left, color);
-        }
-        else if (node->left->type == VAR)
-        {
-            fprintf (file, "{\"%s\n%p\"--\"%.*s\n%p\"[color = \"%s\"]};\n",
-            get_oper_name (node->value.oper), node, (int) VARS[node->left->value.n_var].len, VARS[node->left->value.n_var].name, node->left, color);
-        }
-        print_connections (node->left, file, VARS);
-    }
-    free (color);
 }
 
 Node* create_node (enum Type type, double value, Node* left, Node* right, enum DifError* error)
@@ -260,10 +158,15 @@ Node* create_node (enum Type type, double value, Node* left, Node* right, enum D
     return new_node;
 }
 
-Node* copy (const Node* node)
+Node* copy (const Node* node, enum DifError* error)
 {
-    // printf ("node.type == %d\n", node->type);
     Node* copy_node = (Node*) calloc (1, sizeof (Node));
+
+    if (copy_node == NULL)
+    {
+        *error = DIF_ERROR_CALLOC;
+        return NULL;
+    }
 
     copy_node->type = node->type;
 
@@ -277,13 +180,13 @@ Node* copy (const Node* node)
         copy_node->value.oper = node->value.oper;
 
     if (node->left != NULL)
-        copy_node->left = copy (node->left);
+        copy_node->left = copy (node->left, error);
 
     else
         copy_node->left = NULL;
 
     if (node->right != NULL)
-        copy_node->right = copy (node->right);
+        copy_node->right = copy (node->right, error);
 
     else
         copy_node->right = NULL;
@@ -493,7 +396,7 @@ void skip_space (char** str)
 Node* simplification (Node* node, enum DifError* error)
 {
     bool change_this_time = false;
-    Node* c_node = copy (node);
+    Node* c_node = copy (node, error);
     do
     {
         change_this_time = false;
@@ -589,11 +492,17 @@ void taylor (Node* node, enum DifError* error)
             prev_node = node;
             if (i > 0)
             {
-                node = diff (node, error);
+                Node* temp_node = diff (node, error);
+                if (*error != DIF_NO_ERROR)
+                {
+                    tree_dtor (node);
+                    return;
+                }
+                node = temp_node;
                 tree_dtor (prev_node);
             }
 
-            change_node = copy (node);
+            change_node = copy (node, error);
             change_node = change_x0 (change_node, x0);
             prev_node = change_node;
             change_node = simplification (change_node, error);

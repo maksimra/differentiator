@@ -23,8 +23,14 @@ FLAGS := -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ \
 		 null,object-size,return,returns-nonnull-attribute,shift,$\
 		 signed-integer-overflow,undefined,unreachable,vla-bound,vptr
 
-output: $(BUILD)/check_args.o $(BUILD)/dif_operations.o $(BUILD)/diff.o $(BUILD)/taylor.o
-	@g++ $(BUILD)/check_args.o $(BUILD)/dif_operations.o $(BUILD)/diff.o $(BUILD)/taylor.o $(FLAGS) -o $(BUILD)/output
+output: $(BUILD)/check_args.o $(BUILD)/dif_operations.o $(BUILD)/diff.o $(BUILD)/taylor.o $(BUILD)/compare_doubles.o $(BUILD)/print_svg.o
+	@g++ $(BUILD)/check_args.o $(BUILD)/dif_operations.o $(BUILD)/diff.o $(BUILD)/compare_doubles.o $(BUILD)/print_svg.o $(BUILD)/taylor.o $(FLAGS) -o $(BUILD)/output
+
+$(BUILD)/compare_doubles.o: source/compare_doubles.cpp
+	@g++ $(FLAGS) -c source/compare_doubles.cpp -o $(BUILD)/compare_doubles.o
+
+$(BUILD)/print_svg.o: source/print_svg.cpp include/diff.h
+	@g++ $(FLAGS) -c source/print_svg.cpp -o $(BUILD)/print_svg.o
 
 $(BUILD)/check_args.o: source/check_args.cpp include/diff.h
 	@g++ $(FLAGS) -c source/check_args.cpp -o $(BUILD)/check_args.o

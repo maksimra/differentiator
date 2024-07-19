@@ -164,7 +164,7 @@ const char*   dif_get_error            (enum DifError error);
 void          dif_print_error          (enum DifError error);
 enum DifError check_argc               (const int argc, int necessary_n_arg);
 void          tree_dtor                (Node* root);
-Node*         copy                     (const Node* node);
+Node*         copy                     (const Node* node, enum DifError* error);
 Node*         create_node              (enum Type type, double value, Node* left, Node* right, enum DifError* error);
 enum DifError graphviz                 (Node* node, FILE* file, struct Vars* VARS);
 void          print_start              (FILE* file);
