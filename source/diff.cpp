@@ -4,13 +4,13 @@ static FILE* log_file = stderr;
 
 #define PRINT(...) if (log_file != NULL) fprintf (log_file, __VA_ARGS__)
 
-char* s = NULL;
-
 static const int OPER_N_SYMB = 10;
 
 static const int FOR_ANSW = 10;
 
 static const int YES_NO_LEN = 4;
+
+static const int NOT_OPER = -1;
 
 static const int N_OPERS = sizeof (OP) / sizeof (OP[0]);
 
@@ -20,7 +20,7 @@ enum DifError dif_set_log_file (FILE* file)
     return DIF_NO_ERROR;
 }
 
-enum DifError read_file (const char* NAME, size_t* size)
+enum DifError read_file (const char* NAME, char** buffer, size_t* size)
 {
     struct stat statbuf = {};
 
@@ -29,16 +29,16 @@ enum DifError read_file (const char* NAME, size_t* size)
     if (stat (NAME, &statbuf))
         return DIF_ERROR_STAT;
 
-    s = (char*) calloc ((size_t) statbuf.st_size + sizeof (char), sizeof (char));
+    *buffer = (char*) calloc ((size_t) statbuf.st_size + sizeof (char), sizeof (char));
 
-    if (s == NULL)
+    if (*buffer == NULL)
         return DIF_ERROR_CALLOC;
 
-    *size = fread (s, sizeof (char), (size_t) statbuf.st_size, file);
+    *size = fread (*buffer, sizeof (char), (size_t) statbuf.st_size, file);
 
     if (*size != (size_t) statbuf.st_size)
     {
-        free (s);
+        free (*buffer);
         return DIF_ERROR_FREAD;
     }
 
@@ -56,7 +56,7 @@ int search_oper (const char* str, size_t len)
             return n_oper;
         }
     }
-    return -1;
+    return NOT_OPER;
 }
 
 void printf_str (FILE* file, const Node* node, int n_space)
@@ -139,7 +139,7 @@ Node* create_node (enum Type type, double value, Node* left, Node* right, enum D
     return new_node;
 }
 
-Node* copy (const Node* node, enum DifError* error)
+Node* copy_tree (const Node* node, enum DifError* error)
 {
     Node* copy_node = (Node*) calloc (1, sizeof (Node));
 
@@ -151,23 +151,16 @@ Node* copy (const Node* node, enum DifError* error)
 
     copy_node->type = node->type;
 
-    if (node->type == NUM)
-        copy_node->value.number = node->value.number;
-
-    else if (node->type == VAR)
-        copy_node->value.n_var = node->value.n_var;
-
-    else if (node->type == OPER)
-        copy_node->value.oper = node->value.oper;
+    copy_node->value = node->value;
 
     if (node->left != NULL)
-        copy_node->left = copy (node->left, error);
+        copy_node->left = copy_tree (node->left, error);
 
     else
         copy_node->left = NULL;
 
     if (node->right != NULL)
-        copy_node->right = copy (node->right, error);
+        copy_node->right = copy_tree (node->right, error);
 
     else
         copy_node->right = NULL;
@@ -240,36 +233,36 @@ Node* diff (const Node* node, enum DifError* error)
     }
 }
 
-enum DifError token (struct Tokens* TOK, struct Vars* VARS, int MAX_N_VARS)
+enum DifError token (struct Tokens* TOK, struct Vars* VARS, char* buffer, int MAX_N_VARS)
 {
     int n_tok = 0;
     double num = 0;
     int n_var = 0;
-    while (*s != '$')
+    while (*buffer != '$')
     {
-        skip_space (&s);
-        char* start_pos = s;
+        skip_space (&buffer);
+        char* start_pos = buffer;
         bool is_alpha = false;
-        while (isalpha (*s))
+        while (isalpha (*buffer))
         {
             is_alpha = true;
-            s++;
+            buffer++;
         }
 
-        if (is_alpha == false && (*s == '+' ||
-                                  *s == '-' ||
-                                  *s == '*' ||
-                                  *s == '/' ||
-                                  *s == '^'))
+        if (is_alpha == false && (*buffer == '+' ||
+                                  *buffer == '-' ||
+                                  *buffer == '*' ||
+                                  *buffer == '/' ||
+                                  *buffer == '^'))
         {
             is_alpha = true;
-            s++;
+            buffer++;
         }
 
         if (is_alpha == true)
         {
-            int n_oper = search_oper (start_pos, (size_t) (s - start_pos));
-            if (n_oper == -1)
+            int n_oper = search_oper (start_pos, (size_t) (buffer - start_pos));
+            if (n_oper == NOT_OPER)
             {
                 assert (n_var < MAX_N_VARS);
 
@@ -277,7 +270,7 @@ enum DifError token (struct Tokens* TOK, struct Vars* VARS, int MAX_N_VARS)
                 TOK[n_tok].elem.n_var = n_var;
 
                 VARS[n_var].num = n_var;
-                VARS[n_var].len = (size_t) (s - start_pos);
+                VARS[n_var].len = (size_t) (buffer - start_pos);
                 VARS[n_var].name = start_pos;
 
                 n_var++;
@@ -295,11 +288,11 @@ enum DifError token (struct Tokens* TOK, struct Vars* VARS, int MAX_N_VARS)
 
         bool was_point = false;
 
-        while (isdigit (*s))
+        while (isdigit (*buffer))
         {
-            s++;
-            if (*s == '.' && was_point == false)
-                s++;
+            buffer++;
+            if (*buffer == '.' && was_point == false)
+                buffer++;
         }
 
         if (sscanf (start_pos, "%lf", &num) != 0)
@@ -310,9 +303,9 @@ enum DifError token (struct Tokens* TOK, struct Vars* VARS, int MAX_N_VARS)
             continue;
         }
 
-        if (*s == '(' || *s == ')')
+        if (*buffer == '(' || *buffer == ')')
         {
-            s++;
+            buffer++;
             TOK[n_tok].type = TXT;
             TOK[n_tok].elem.symb = *start_pos;
             n_tok++;
@@ -322,7 +315,7 @@ enum DifError token (struct Tokens* TOK, struct Vars* VARS, int MAX_N_VARS)
     }
     TOK[n_tok].type = TXT;
     TOK[n_tok].elem.symb = '$';
-    tokin_dump (TOK, n_tok, VARS);
+    token_dump (TOK, n_tok, VARS);
     return DIF_NO_ERROR;
 }
 
@@ -331,9 +324,9 @@ const char* get_oper_name (enum OPER oper)
     return OP[(int) oper].name;
 }
 
-void tokin_dump (struct Tokens* TOK, int n_tok, struct Vars* VARS)
+void token_dump (struct Tokens* TOK, int n_tok, struct Vars* VARS)
 {
-    for (int pass = 0; pass < n_tok + 1; pass++)
+    for (int pass = 0; pass <= n_tok; pass++)
     {
         switch (TOK[pass].type)
         {
@@ -365,7 +358,7 @@ void skip_space (char** str)
 Node* simplification (Node* node, enum DifError* error)
 {
     bool change_this_time = false;
-    Node* c_node = copy (node, error);
+    Node* c_node = copy_tree (node, error);
     do
     {
         change_this_time = false;
@@ -455,23 +448,24 @@ void taylor (Node* node, enum DifError* error)
 
         Node* change_node = NULL;
         Node* prev_node = NULL;
+        Node* cpy_node = copy_tree (node, error);
 
         for (int i = 0; i <= n; i++)
         {
-            prev_node = node;
+            prev_node = cpy_node;
             if (i > 0)
             {
-                Node* temp_node = diff (node, error);
+                Node* temp_node = diff (cpy_node, error);
                 if (*error != DIF_NO_ERROR)
                 {
-                    tree_dtor (node);
+                    tree_dtor (cpy_node);
                     return;
                 }
-                node = temp_node;
+                cpy_node = temp_node;
                 tree_dtor (prev_node);
             }
 
-            change_node = copy (node, error);
+            change_node = copy_tree (cpy_node, error);
             change_node = change_x0 (change_node, x0);
             prev_node = change_node;
             change_node = simplification (change_node, error);
@@ -480,7 +474,7 @@ void taylor (Node* node, enum DifError* error)
             {
                 printf ("\n%s\n", dif_get_error (*error));
                 tree_dtor (prev_node);
-                tree_dtor (node);
+                tree_dtor (cpy_node);
                 return;
             }
 
@@ -488,7 +482,7 @@ void taylor (Node* node, enum DifError* error)
             printf ("%lf * (x - %lf)^%d / %d + ", change_node->value.number, x0, i, fact (i));
             tree_dtor (change_node);
         }
-        tree_dtor (node);
+        tree_dtor (cpy_node);
 
         printf ("o (x - %lf)^%d\n", x0, n);
         printf ("It was difficult.\n");
@@ -496,7 +490,6 @@ void taylor (Node* node, enum DifError* error)
     else
     {
         printf ("Goodbye!\n");
-        tree_dtor (node);
     }
 }
 

@@ -10,16 +10,16 @@
 
 enum OPER
 {
-    ADD =  0,
-    SUB =  1,
-    MUL =  2,
-    DIV =  3,
-    SIN =  4,
-    COS =  5,
-    LN =   6,
-    SQRT = 7,
-    POW =  8,
-    EXP =  9
+    ADD =  1,
+    SUB =  2,
+    MUL =  3,
+    DIV =  4,
+    SIN =  5,
+    COS =  6,
+    LN =   7,
+    SQRT = 8,
+    POW =  9,
+    EXP =  10
 };
 
 union Elem
@@ -160,7 +160,7 @@ const char*   dif_get_error            (enum DifError error);
 void          dif_print_error          (enum DifError error);
 enum DifError check_argc               (const int argc, int necessary_n_arg);
 void          tree_dtor                (Node* root);
-Node*         copy                     (const Node* node, enum DifError* error);
+Node*         copy_tree                     (const Node* node, enum DifError* error);
 Node*         create_node              (enum Type type, double value, Node* left, Node* right, enum DifError* error);
 enum DifError graphviz                 (Node* node, FILE* file, struct Vars* VARS);
 void          print_start              (FILE* file);
@@ -169,10 +169,10 @@ void          print_connections            (Node* node, FILE* file, struct Vars*
 void          draw_right               (Node* node, FILE* file, struct Vars* VARS);
 void          draw_left                (Node* node, FILE* file, struct Vars* VARS);
 Node*         diff                     (const Node* node, enum DifError* error);
-enum DifError read_file                (const char* NAME, size_t* size);
-enum DifError token                    (struct Tokens* TOK, struct Vars* VARS, int MAX_N_VARS);
+enum DifError read_file                (const char* NAME, char** buffer, size_t* size);
+enum DifError token                    (struct Tokens* TOK, struct Vars* VARS, char* buffer, int MAX_N_VARS);
 void          skip_space               (char** str);
-void          tokin_dump               (struct Tokens* TOK, int n_tok, struct Vars* VARS);
+void          token_dump               (struct Tokens* TOK, int n_tok, struct Vars* VARS);
 Node*         simplification           (Node* node, enum DifError* error);
 Node*         zeros_and_ones           (Node* node, bool* change, enum DifError* error);
 Node*         count_const              (Node* node, bool* change, enum DifError* error);

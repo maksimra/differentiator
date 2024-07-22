@@ -35,14 +35,14 @@ void print_end (FILE* file)
 
 void draw_right (Node* node, FILE* file, struct Vars* VARS)
 {
-    char* color = NULL;
+    const char* color = NULL;
     assert (file != NULL);
     if (node->right != NULL)
     {
         if (node->right->left == NULL && node->right->right == NULL)
-            color = strdup ("red"); // sprintf and snprintf
+            color = "red";
         else
-            color = strdup ("green");
+            color = "green";
         if (node->right->type == OPER)
         {
             fprintf (file, "{\"%s\n%p\"--\"%s\n%p\"[color = \"%s\"]};\n",
@@ -61,18 +61,17 @@ void draw_right (Node* node, FILE* file, struct Vars* VARS)
 
         print_connections (node->right, file, VARS);
     }
-    free (color);
 }
 
 void draw_left (Node* node, FILE* file, struct Vars* VARS)
 {
-    char* color = NULL;
+    const char* color = NULL;
     if (node->left != NULL)
     {
         if (node->left->left == NULL && node->left->right == NULL)
-            color = strdup ("red"); // sprintf and snprintf
+            color = "red"; // sprintf and snprintf
         else
-            color = strdup ("green");
+            color = "green";
         if (node->left->type == OPER)
         {
             fprintf (file, "{\"%s\n%p\"--\"%s\n%p\"[color = \"%s\"]};\n",
@@ -90,5 +89,4 @@ void draw_left (Node* node, FILE* file, struct Vars* VARS)
         }
         print_connections (node->left, file, VARS);
     }
-    free (color);
 }

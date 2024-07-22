@@ -31,7 +31,8 @@ int main (const int argc, const char* argv[])
     dif_print_error (error);
 
     size_t size = 0;
-    error = read_file (NAME, &size);
+    char* expression = NULL;
+    error = read_file (NAME, &expression, &size);
     dif_print_error (error);
 
     struct Tokens* TOK = (struct Tokens*) calloc (size, sizeof (struct Tokens));
@@ -41,7 +42,7 @@ int main (const int argc, const char* argv[])
 
     dif_print_error (error);
 
-    error = token (TOK, VARS, MAX_N_VARS);
+    error = token (TOK, VARS, expression, MAX_N_VARS);
     dif_print_error (error);
 
     int n_tok = 0;
@@ -61,6 +62,8 @@ int main (const int argc, const char* argv[])
     print_tree_txt_incr_tabs (root, text_tree, &n_space);
 
     taylor (root, &error);
+
+    tree_dtor (root);
 
     free (TOK);
     fclose (text_tree);
