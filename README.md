@@ -28,6 +28,8 @@ objects/output "name_of_file_with_expression.txt"
 You should create .txt file which contains math expression (in folder with repository). 
 Example:
 ![image](https://github.com/user-attachments/assets/c6de589e-6943-4139-b67d-b90dedd7e138)
+
+
 ***At the end of the expression should be a sign '$'!***
 ## Work in progress
 Makefile will be improved
