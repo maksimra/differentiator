@@ -1,3 +1,6 @@
+#ifndef DIFF_H
+#define DIFF_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,16 +13,16 @@
 
 enum OPER
 {
-    ADD =  1,
-    SUB =  2,
-    MUL =  3,
-    DIV =  4,
-    SIN =  5,
-    COS =  6,
-    LN =   7,
+    ADD  = 1,
+    SUB  = 2,
+    MUL  = 3,
+    DIV  = 4,
+    SIN  = 5,
+    COS  = 6,
+    LN   = 7,
     SQRT = 8,
-    POW =  9,
-    EXP =  10
+    POW  = 9,
+    EXP  = 10
 };
 
 union Elem
@@ -47,10 +50,10 @@ union Value
 
 enum Type
 {
-    OPER,
-    NUM,
-    VAR,
-    TXT
+    OPER = 1,
+    NUM  = 2,
+    VAR  = 3,
+    TXT  = 4
 };
 
 struct Tokens
@@ -102,36 +105,36 @@ struct Ops
     bool is_func;
 };
 
-Node* dif_add (const Node* node, enum DifError* error);
-Node* dif_sub (const Node* node, enum DifError* error);
-Node* dif_mul (const Node* node, enum DifError* error);
-Node* dif_div (const Node* node, enum DifError* error);
-Node* dif_sin (const Node* node, enum DifError* error);
-Node* dif_cos (const Node* node, enum DifError* error);
-Node* dif_ln (const Node* node, enum DifError* error);
-Node* dif_sqrt (const Node* node, enum DifError* error);;
-Node* dif_pow (const Node* node, enum DifError* error);
-Node* dif_exp (const Node* node, enum DifError* error);
-Node* eval_add (Node* node, enum DifError* error);
-Node* eval_sub (Node* node, enum DifError* error);
-Node* eval_mul (Node* node, enum DifError* error);
-Node* eval_div (Node* node, enum DifError* error);
-Node* eval_pow (Node* node, enum DifError* error);
+Node* dif_add   (const Node* node, enum DifError* error);
+Node* dif_sub   (const Node* node, enum DifError* error);
+Node* dif_mul   (const Node* node, enum DifError* error);
+Node* dif_div   (const Node* node, enum DifError* error);
+Node* dif_sin   (const Node* node, enum DifError* error);
+Node* dif_cos   (const Node* node, enum DifError* error);
+Node* dif_ln    (const Node* node, enum DifError* error);
+Node* dif_sqrt  (const Node* node, enum DifError* error);;
+Node* dif_pow   (const Node* node, enum DifError* error);
+Node* dif_exp   (const Node* node, enum DifError* error);
+Node* eval_add  (Node* node, enum DifError* error);
+Node* eval_sub  (Node* node, enum DifError* error);
+Node* eval_mul  (Node* node, enum DifError* error);
+Node* eval_div  (Node* node, enum DifError* error);
+Node* eval_pow  (Node* node, enum DifError* error);
 Node* eval_sin  (Node* node, enum DifError* error);
 Node* eval_cos  (Node* node, enum DifError* error);
-Node* eval_ln (Node* node, enum DifError* error);
+Node* eval_ln   (Node* node, enum DifError* error);
 Node* eval_sqrt (Node* node, enum DifError* error);
 Node* eval_exp  (Node* node, enum DifError* error);
-Node* smp_add (Node* node, bool* change, enum DifError* error);
-Node* smp_sub (Node* node, bool* change, enum DifError* error);
-Node* smp_mul (Node* node, bool* change, enum DifError* error);
-Node* smp_div (Node* node, bool* change, enum DifError* error);
-Node* smp_sin (Node* node, bool* change, enum DifError* error);
-Node* smp_cos (Node* node, bool* change, enum DifError* error);
-Node* smp_ln (Node* node, bool* change, enum DifError* error);
-Node* smp_sqrt (Node* node, bool* change, enum DifError* error);
-Node* smp_exp (Node* node, bool* change, enum DifError* error);
-Node* smp_pow  (Node* node, bool* change, enum DifError* error);
+Node* smp_add   (Node* node, bool* change, enum DifError* error);
+Node* smp_sub   (Node* node, bool* change, enum DifError* error);
+Node* smp_mul   (Node* node, bool* change, enum DifError* error);
+Node* smp_div   (Node* node, bool* change, enum DifError* error);
+Node* smp_sin   (Node* node, bool* change, enum DifError* error);
+Node* smp_cos   (Node* node, bool* change, enum DifError* error);
+Node* smp_ln    (Node* node, bool* change, enum DifError* error);
+Node* smp_sqrt  (Node* node, bool* change, enum DifError* error);
+Node* smp_exp   (Node* node, bool* change, enum DifError* error);
+Node* smp_pow   (Node* node, bool* change, enum DifError* error);
 
 
 
@@ -160,12 +163,12 @@ const char*   dif_get_error            (enum DifError error);
 void          dif_print_error          (enum DifError error);
 enum DifError check_argc               (const int argc, int necessary_n_arg);
 void          tree_dtor                (Node* root);
-Node*         copy_tree                     (const Node* node, enum DifError* error);
+Node*         copy_tree                (const Node* node, enum DifError* error);
 Node*         create_node              (enum Type type, double value, Node* left, Node* right, enum DifError* error);
 enum DifError graphviz                 (Node* node, FILE* file, struct Vars* VARS);
 void          print_start              (FILE* file);
 void          print_end                (FILE* file);
-void          print_connections            (Node* node, FILE* file, struct Vars* VARS);
+void          print_connections        (Node* node, FILE* file, struct Vars* VARS);
 void          draw_right               (Node* node, FILE* file, struct Vars* VARS);
 void          draw_left                (Node* node, FILE* file, struct Vars* VARS);
 Node*         diff                     (const Node* node, enum DifError* error);
@@ -181,3 +184,5 @@ int           fact                     (int n);
 Node*         change_x0                (Node* node, double x0);
 const char*   get_oper_name            (enum OPER oper);
 enum DifError check_args               (const int argc, const char* argv[]);
+
+#endif // DIFF_H
