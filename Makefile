@@ -2,6 +2,10 @@
 
 BUILD := objects
 
+program_SRC := $(wildcard source/*.cpp)
+temp_OBJ := $(program_SRC:.cpp=.o)
+program_OBJ := $(temp_OBJ:source%=$(BUILD)%)
+
 FLAGS := -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ \
          -Waggressive-loop-optimizations -Wc++14-compat -Wmissing-declarations \
 		 -Wcast-align -Wcast-qual -Wchar-subscripts -Wconditionally-supported \
@@ -23,8 +27,8 @@ FLAGS := -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ \
 		 null,object-size,return,returns-nonnull-attribute,shift,$\
 		 signed-integer-overflow,undefined,unreachable,vla-bound,vptr
 
-output: $(BUILD)/check_args.o $(BUILD)/dif_operations.o $(BUILD)/diff.o $(BUILD)/taylor.o $(BUILD)/compare_doubles.o $(BUILD)/print_svg.o $(BUILD)/parser.o
-	@g++ $(BUILD)/check_args.o $(BUILD)/dif_operations.o $(BUILD)/diff.o $(BUILD)/compare_doubles.o $(BUILD)/print_svg.o $(BUILD)/parser.o $(BUILD)/taylor.o $(FLAGS) -o $(BUILD)/output
+output: $(BUILD)/taylor.o $(program_OBJ)
+	@g++ $(program_OBJ) $(BUILD)/taylor.o $(FLAGS) -o $(BUILD)/output
 
 $(BUILD)/parser.o: source/parser.cpp
 	@g++ $(FLAGS) -c source/parser.cpp -o $(BUILD)/parser.o
