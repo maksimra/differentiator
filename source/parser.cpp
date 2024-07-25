@@ -1,44 +1,44 @@
-#include "../include/parser.h"
+#include "../include/parser.hpp"
 
-#define CUR_TYPE TOK[*n_tok].type
-#define CUR_OPER TOK[*n_tok].elem.oper
-#define PREV_OPER TOK[*n_tok - 1].elem.oper
+#define CUR_TYPE tok[*n_tok].type
+#define CUR_OPER tok[*n_tok].elem.oper
+#define PREV_OPER tok[*n_tok - 1].elem.oper
 
-Node* parse (enum DifError* error, struct Tokens* TOK, int* n_tok)
+Node* parse (DifError* error, struct Tokens* tok, int* n_tok)
 {
-    Node* val = get_e (error, TOK, n_tok);
+    Node* val = get_e (error, tok, n_tok);
 
     if ((CUR_TYPE != TXT) ||
-        (CUR_TYPE == TXT && TOK[*n_tok].elem.symb != '$'))
+        (CUR_TYPE == TXT && tok[*n_tok].elem.symbol != '$'))
     {
-        printf ("Не смогли обработать выражение :(\n");
-        *error = DIF_SYNTAX_ERROR;
+        fprintf (stderr, "Не смогли обработать выражение :(\n");
+        *error = DIF_ERROR_SYNTAX;
     }
 
     return val;
 }
 
-Node* get_e (enum DifError* error, struct Tokens* TOK, int* n_tok)
+Node* get_e (DifError* error, struct Tokens* tok, int* n_tok)
 {
     Node* val = NULL;
     if (CUR_TYPE == OPER && CUR_OPER == SUB)
     {
         (*n_tok)++;
 
-        if (couple_oper (*n_tok, TOK) == true)
+        if (couple_oper (*n_tok, tok) == true)
         {
-            *error = DIF_SYNTAX_ERROR;
-            printf ("Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
-                    "Работа программы завершена досрочно :(\n", get_oper_name (CUR_OPER),
+            *error = DIF_ERROR_SYNTAX;
+            fprintf (stderr, "Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
+                             "Работа программы завершена досрочно :(\n", get_oper_name (CUR_OPER),
                                                                 get_oper_name (PREV_OPER));
             return NULL;
         }
 
-        val = create_node (OPER, MUL, create_node (NUM, -1, NULL, NULL, error), get_t (error, TOK, n_tok), error);
+        val = create_node (OPER, MUL, create_node (NUM, -1, NULL, NULL, error), get_t (error, tok, n_tok), error);
     }
     else
     {
-        val = get_t (error, TOK, n_tok);
+        val = get_t (error, tok, n_tok);
     }
     while (CUR_TYPE == OPER && (CUR_OPER == ADD ||
     CUR_OPER == SUB))
@@ -46,18 +46,18 @@ Node* get_e (enum DifError* error, struct Tokens* TOK, int* n_tok)
         int old_n_tok = (*n_tok);
         (*n_tok)++;
 
-        if (couple_oper (*n_tok, TOK) == true)
+        if (couple_oper (*n_tok, tok) == true)
         {
-            *error = DIF_SYNTAX_ERROR;
-            printf ("Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
-                    "Работа программы завершена досрочно :(\n", get_oper_name (CUR_OPER),
+            *error = DIF_ERROR_SYNTAX;
+            fprintf (stderr, "Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
+                             "Работа программы завершена досрочно :(\n", get_oper_name (CUR_OPER),
                                                                 get_oper_name (PREV_OPER));
             tree_dtor (val);
             return NULL;
         }
 
-        Node* val2 = get_t (error, TOK, n_tok);
-        if (TOK[old_n_tok].elem.oper == ADD)
+        Node* val2 = get_t (error, tok, n_tok);
+        if (tok[old_n_tok].elem.oper == ADD)
             val = create_node (OPER, ADD, val, val2, error);
         else
             val = create_node (OPER, SUB, val, val2, error);
@@ -65,37 +65,37 @@ Node* get_e (enum DifError* error, struct Tokens* TOK, int* n_tok)
     return val;
 }
 
-Node* get_k (enum DifError* error, struct Tokens* TOK, int* n_tok)
+Node* get_k (DifError* error, struct Tokens* tok, int* n_tok)
 {
-    Node* val = get_p (error, TOK, n_tok);
+    Node* val = get_p (error, tok, n_tok);
     if (CUR_TYPE == OPER && CUR_OPER == POW)
     {
         (*n_tok)++;
 
-        if (couple_oper (*n_tok, TOK) == true)
+        if (couple_oper (*n_tok, tok) == true)
         {
-            *error = DIF_SYNTAX_ERROR;
-            printf ("Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
-                    "Работа программы завершена досрочно :(\n", get_oper_name (CUR_OPER),
+            *error = DIF_ERROR_SYNTAX;
+            fprintf (stderr, "Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
+                             "Работа программы завершена досрочно :(\n", get_oper_name (CUR_OPER),
                                                                 get_oper_name (PREV_OPER));
             tree_dtor (val);
             return NULL;
         }
 
-        Node* val2 = get_p (error, TOK, n_tok);
+        Node* val2 = get_p (error, tok, n_tok);
         val = create_node (OPER, POW, val, val2, error);
 
         if (CUR_TYPE == OPER && CUR_OPER == POW)
         {
-            *error = DIF_SYNTAX_ERROR;
-            printf ("Введено некорректное выражение: "
-                    "используйте скобки для записи.\n");
+            *error = DIF_ERROR_SYNTAX;
+            fprintf (stderr, "Введено некорректное выражение: "
+                             "используйте скобки для записи.\n");
         }
     }
     return val;
 }
 
-Node* get_s (enum DifError* error, struct Tokens* TOK, int* n_tok)
+Node* get_s (DifError* error, Tokens* tok, int* n_tok)
 {
     if (CUR_TYPE == OPER)
     {
@@ -104,27 +104,27 @@ Node* get_s (enum DifError* error, struct Tokens* TOK, int* n_tok)
 
         if (CUR_TYPE == OPER)
         {
-            *error = DIF_SYNTAX_ERROR;
-            printf ("Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
-                    "Работа программы завершена досрочно :(\n", get_oper_name (CUR_OPER),
+            *error = DIF_ERROR_SYNTAX;
+            fprintf (stderr, "Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
+                             "Работа программы завершена досрочно :(\n", get_oper_name (CUR_OPER),
                                                                 get_oper_name (PREV_OPER));
             return NULL;
         }
 
-        if (CUR_TYPE == TXT && TOK[*n_tok].elem.symb != '(')
+        if (CUR_TYPE == TXT && tok[*n_tok].elem.symbol != '(')
         {
-            *error = DIF_SYNTAX_ERROR;
-            printf ("Введено некорректное выражение:"
-                    "после оператора %s ожидается '(' "
-                    "(пробелы допускаются).\n", get_oper_name (PREV_OPER));
+            *error = DIF_ERROR_SYNTAX;
+            fprintf (stderr, "Введено некорректное выражение:"
+                             "после оператора %s ожидается '(' "
+                             "(пробелы допускаются).\n", get_oper_name (PREV_OPER));
             return NULL;
         }
 
         (*n_tok)++;
-        Node* val = get_e (error, TOK, n_tok);
+        Node* val = get_e (error, tok, n_tok);
 
-        if (CUR_TYPE == TXT && TOK[*n_tok].elem.symb != ')')
-            *error = DIF_SYNTAX_ERROR;
+        if (CUR_TYPE == TXT && tok[*n_tok].elem.symbol != ')')
+            *error = DIF_ERROR_SYNTAX;
 
         (*n_tok)++;
 
@@ -151,52 +151,52 @@ Node* get_s (enum DifError* error, struct Tokens* TOK, int* n_tok)
             case DIV:
             case POW:
             default:
-                *error = DIF_FUNC_ERROR;
+                *error = DIF_ERROR_FUNC;
         }
     }
-    return get_k (error, TOK, n_tok);
+    return get_k (error, tok, n_tok);
 }
 
-Node* get_p (enum DifError* error, struct Tokens* TOK, int* n_tok)
+Node* get_p (DifError* error, struct Tokens* tok, int* n_tok)
 {
-    if (CUR_TYPE == TXT && TOK[*n_tok].elem.symb == '(')
+    if (CUR_TYPE == TXT && tok[*n_tok].elem.symbol == '(')
     {
         (*n_tok)++;
-        Node* val = get_e (error, TOK, n_tok);
+        Node* val = get_e (error, tok, n_tok);
 
-        if (CUR_TYPE == TXT && TOK[*n_tok].elem.symb != ')')
-            *error = DIF_SYNTAX_ERROR;
+        if (CUR_TYPE == TXT && tok[*n_tok].elem.symbol != ')')
+            *error = DIF_ERROR_SYNTAX;
 
         (*n_tok)++;
 
         return val;
     }
-    Node* val = get_n (error, TOK, n_tok);
+    Node* val = get_n (error, tok, n_tok);
     return val;
 }
 
-Node* get_t (enum DifError* error, struct Tokens* TOK, int* n_tok)
+Node* get_t (DifError* error, struct Tokens* tok, int* n_tok)
 {
-    Node* val = get_s (error, TOK, n_tok);
+    Node* val = get_s (error, tok, n_tok);
     while (CUR_TYPE == OPER && (CUR_OPER == MUL
     || CUR_OPER == DIV))
     {
         int old_n_tok = *n_tok;
         (*n_tok)++;
 
-        if (couple_oper (*n_tok, TOK) == true)
+        if (couple_oper (*n_tok, tok) == true)
         {
-            *error = DIF_SYNTAX_ERROR;
-            printf ("Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
-                    "Работа программы завершена досрочно :(\n", get_oper_name (CUR_OPER),
+            *error = DIF_ERROR_SYNTAX;
+            fprintf (stderr, "Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
+                             "Работа программы завершена досрочно :(\n", get_oper_name (CUR_OPER),
                                                                 get_oper_name (PREV_OPER));
             tree_dtor (val);
             return NULL;
         }
 
-        Node* val2 = get_s (error, TOK, n_tok);
+        Node* val2 = get_s (error, tok, n_tok);
 
-        if (TOK[old_n_tok].elem.oper == MUL)
+        if (tok[old_n_tok].elem.oper == MUL)
             val = create_node (OPER, MUL, val, val2, error);
         else
             val = create_node (OPER, DIV, val, val2, error);
@@ -204,34 +204,34 @@ Node* get_t (enum DifError* error, struct Tokens* TOK, int* n_tok)
     return val;
 }
 
-Node* get_n (enum DifError* error, struct Tokens* TOK, int* n_tok)
+Node* get_n (DifError* error, struct Tokens* tok, int* n_tok)
 {
     double val = 0;
     int n_var = -1;
 
     if (CUR_TYPE == NUM)
     {
-        val = TOK[*n_tok].elem.num;
+        val = tok[*n_tok].elem.num;
         (*n_tok)++;
         return create_node (NUM, val, NULL, NULL, error);
     }
     else if (CUR_TYPE == VAR)
     {
-        n_var = TOK[*n_tok].elem.n_var;
+        n_var = tok[*n_tok].elem.n_var;
         (*n_tok)++;
         return create_node (VAR, n_var, NULL, NULL, error);
     }
     else
     {
-        *error = DIF_SYNTAX_ERROR;
+        *error = DIF_ERROR_SYNTAX;
         return NULL;
     }
 }
 
-bool couple_oper (int n_tok, struct Tokens* TOK)
+bool couple_oper (int n_tok, struct Tokens* tok)
 {
-    if (TOK[n_tok].type == OPER)
-        if (!OP[(int) TOK[n_tok].elem.oper].is_func)
+    if (tok[n_tok].type == OPER)
+        if (!OP[(int) tok[n_tok].elem.oper].is_func)
             return true;
 
     return false;

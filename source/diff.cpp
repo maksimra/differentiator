@@ -1,26 +1,22 @@
-#include "../include/diff.h"
+#include "../include/diff.hpp"
 
 static FILE* log_file = stderr;
 
 #define PRINT(...) if (log_file != NULL) fprintf (log_file, __VA_ARGS__)
 
-static const int OPER_N_SYMB = 10;
+const int NUM_OF_CHAR_TO_ANSW = 10;
 
-static const int FOR_ANSW = 10;
+const int NOT_OPER = -1;
 
-static const int YES_NO_LEN = 4;
+const int NUM_OF_OPERS = sizeof (OP) / sizeof (OP[0]);
 
-static const int NOT_OPER = -1;
-
-static const int N_OPERS = sizeof (OP) / sizeof (OP[0]);
-
-enum DifError dif_set_log_file (FILE* file)
+DifError dif_set_log_file (FILE* file)
 {
     log_file = file;
     return DIF_NO_ERROR;
 }
 
-enum DifError read_file (const char* NAME, char** buffer, size_t* size)
+DifError read_file (const char* NAME, char** buffer, size_t* size)
 {
     struct stat statbuf = {};
 
@@ -49,7 +45,7 @@ enum DifError read_file (const char* NAME, char** buffer, size_t* size)
 
 int search_oper (const char* str, size_t len)
 {
-    for (int n_oper = 0; n_oper < N_OPERS; n_oper ++)
+    for (int n_oper = 0; n_oper < NUM_OF_OPERS; n_oper ++)
     {
         if (strncmp (str, OP[n_oper].name, len) == 0)
         {
@@ -112,7 +108,7 @@ void tree_dtor (Node* root)
     free (root);
 }
 
-Node* create_node (enum Type type, double value, Node* left, Node* right, enum DifError* error)
+Node* create_node (Type type, double value, Node* left, Node* right, DifError* error)
 {
     Node* new_node = (Node*) calloc (1, sizeof (Node));
 
@@ -125,7 +121,7 @@ Node* create_node (enum Type type, double value, Node* left, Node* right, enum D
     new_node->type = type;
 
     if (type == OPER)
-        new_node->value.oper = (enum OPER) value;
+        new_node->value.oper = (Oper) value;
 
     else if (type == NUM)
         new_node->value.number = value;
@@ -139,7 +135,7 @@ Node* create_node (enum Type type, double value, Node* left, Node* right, enum D
     return new_node;
 }
 
-Node* copy_tree (const Node* node, enum DifError* error)
+Node* copy_tree (const Node* node, DifError* error)
 {
     Node* copy_node = (Node*) calloc (1, sizeof (Node));
 
@@ -168,12 +164,12 @@ Node* copy_tree (const Node* node, enum DifError* error)
     return copy_node;
 }
 
-void dif_print_error (enum DifError error)
+void dif_print_error (DifError error)
 {
     PRINT ("%s\n", dif_get_error (error));
 }
 
-const char* dif_get_error (enum DifError error)
+const char* dif_get_error (DifError error)
 {
     switch (error)
     {
@@ -187,7 +183,7 @@ const char* dif_get_error (enum DifError error)
             return "Dif: Ошибка чтения выражения с файла.";
         case DIF_ERROR_FREAD:
             return "Dif: Ошибка в работе функции fread.";
-        case DIF_NULL_PTR_LOG:
+        case DIF_ERROR_NULL_PTR_LOG:
             return "Dif: Передан нулевой указатель на log_file.";
         case DIF_ERROR_STRTOD:
             return "Dif: Ошибка работы функции strtod.";
@@ -198,15 +194,15 @@ const char* dif_get_error (enum DifError error)
             return "Dif: Введено некорректное имя файла.";
         case DIF_ERROR_FOPEN:
             return "Dif: Ошибка открытия файла (fopen).";
-        case DIF_FUNC_ERROR:
+        case DIF_ERROR_FUNC:
             return "Dif: Ошибка определения типа функции.";
-        case DIF_SYNTAX_ERROR:
+        case DIF_ERROR_SYNTAX:
             return "Dif: Синтаксическая ошибка.";
-        case DIF_DIV_NUL:
+        case DIF_ERROR_DIV_NUL:
             return "Dif: Деление на нуль!";
-        case DIF_LN_NUL:
+        case DIF_ERROR_LN_NUL:
             return "Dif: Логарифм от нуля - опасно.";
-        case DIF_FGETS_ERROR:
+        case DIF_ERROR_FGETS:
             return "Dif: Ошибка в работе функции fgets.";
         case DIF_ERROR_x0:
             return "Dif: Ошибка считывания x0.";
@@ -217,7 +213,7 @@ const char* dif_get_error (enum DifError error)
     }
 }
 
-Node* diff (const Node* node, enum DifError* error)
+Node* diff (const Node* node, DifError* error)
 {
     switch (node->type)
     {
@@ -233,7 +229,7 @@ Node* diff (const Node* node, enum DifError* error)
     }
 }
 
-enum DifError token (struct Tokens* TOK, struct Vars* VARS, char* buffer, int MAX_N_VARS)
+DifError token (Tokens* TOK, Vars* VARS, char* buffer, int MAX_N_VARS)
 {
     int n_tok = 0;
     double num = 0;
@@ -280,7 +276,7 @@ enum DifError token (struct Tokens* TOK, struct Vars* VARS, char* buffer, int MA
             else
             {
                 TOK[n_tok].type = OPER;
-                TOK[n_tok].elem.oper = (enum OPER) n_oper;
+                TOK[n_tok].elem.oper = (Oper) n_oper;
                 n_tok++;
                 continue;
             }
@@ -307,24 +303,24 @@ enum DifError token (struct Tokens* TOK, struct Vars* VARS, char* buffer, int MA
         {
             buffer++;
             TOK[n_tok].type = TXT;
-            TOK[n_tok].elem.symb = *start_pos;
+            TOK[n_tok].elem.symbol = *start_pos;
             n_tok++;
             continue;
         }
-        return DIF_SYNTAX_ERROR;
+        return DIF_ERROR_SYNTAX;
     }
     TOK[n_tok].type = TXT;
-    TOK[n_tok].elem.symb = '$';
+    TOK[n_tok].elem.symbol = '$';
     token_dump (TOK, n_tok, VARS);
     return DIF_NO_ERROR;
 }
 
-const char* get_oper_name (enum OPER oper)
+const char* get_oper_name (Oper oper)
 {
     return OP[(int) oper].name;
 }
 
-void token_dump (struct Tokens* TOK, int n_tok, struct Vars* VARS)
+void token_dump (Tokens* TOK, int n_tok, Vars* VARS)
 {
     for (int pass = 0; pass <= n_tok; pass++)
     {
@@ -340,7 +336,7 @@ void token_dump (struct Tokens* TOK, int n_tok, struct Vars* VARS)
                 PRINT ("VAR: %d --> %.*s\n", pass, (int) VARS[TOK[pass].elem.n_var].len, VARS[TOK[pass].elem.n_var].name);
                 break;
             case TXT:
-                PRINT ("TXT: %d --> %c\n", pass, TOK[pass].elem.symb);
+                PRINT ("TXT: %d --> %c\n", pass, TOK[pass].elem.symbol);
                 break;
             default:
                 assert (0);
@@ -355,7 +351,7 @@ void skip_space (char** str)
 }
 
 
-Node* simplification (Node* node, enum DifError* error)
+Node* simplification (Node* node, DifError* error)
 {
     bool change_this_time = false;
     Node* c_node = copy_tree (node, error);
@@ -383,7 +379,7 @@ Node* simplification (Node* node, enum DifError* error)
     return c_node;
 }
 
-Node* zeros_and_ones (Node* node, bool* change, enum DifError* error)
+Node* zeros_and_ones (Node* node, bool* change, DifError* error)
 {
     if (node->left != NULL)
         node->left = zeros_and_ones (node->left, change, error);
@@ -397,7 +393,7 @@ Node* zeros_and_ones (Node* node, bool* change, enum DifError* error)
     return node;
 }
 
-Node* count_const (Node* node, bool* change, enum DifError* error)
+Node* count_const (Node* node, bool* change, DifError* error)
 {
     if (node->left != NULL)
         node->left = count_const (node->left, change, error);
@@ -415,20 +411,18 @@ Node* count_const (Node* node, bool* change, enum DifError* error)
     return node;
 }
 
-void taylor (Node* node, enum DifError* error)
+void taylor (Node* node, DifError* error)
 {
-    printf ("Hello! Would you like to decompose the expression? ('Yes' or 'No')\n");
-    char answer[FOR_ANSW] = {};
-    if (fgets (answer, FOR_ANSW, stdin) == NULL)
-        *error = DIF_FGETS_ERROR;
-    if (strlen (answer) > YES_NO_LEN)
-        printf ("Incorrect response. Some of the information is lost.\n");
-    if (strncmp (answer, "No\n", YES_NO_LEN) == 0)
+    printf ("Hello! Would you like to decompose the expression? ('yes' or 'no')\n");
+    char answer[NUM_OF_CHAR_TO_ANSW] = {};
+    if (fgets (answer, NUM_OF_CHAR_TO_ANSW, stdin) == NULL)
+        *error = DIF_ERROR_FGETS;
+    if (strncmp (answer, "no\n", NUM_OF_CHAR_TO_ANSW) == 0)
     {
         printf ("Sadly :(\n");
         return;
     }
-    if (strncmp (answer, "Yes\n", YES_NO_LEN) == 0)
+    if (strncmp (answer, "yes\n", NUM_OF_CHAR_TO_ANSW) == 0)
     {
         double x0 = NAN;
         int n = 0;

@@ -1,6 +1,6 @@
-#include "../include/diff.h"
+#include "../include/diff.hpp"
 
-enum DifError graphviz (Node* node, FILE* file, struct Vars* VARS)
+DifError graphviz (Node* node, FILE* file, Vars* VARS)
 {
     assert (node != NULL);
     assert (file != NULL);
@@ -22,7 +22,7 @@ void print_start (FILE* file)
     fprintf (file, "graph G {\n");
 }
 
-void print_connections (Node* node, FILE* file, struct Vars* VARS)
+void print_connections (Node* node, FILE* file, Vars* VARS)
 {
     draw_left (node, file, VARS);
     draw_right (node, file, VARS);
@@ -33,7 +33,7 @@ void print_end (FILE* file)
     fprintf (file, "}");
 }
 
-void draw_right (Node* node, FILE* file, struct Vars* VARS)
+void draw_right (Node* node, FILE* file, Vars* VARS)
 {
     const char* color = NULL;
     assert (file != NULL);
@@ -63,7 +63,7 @@ void draw_right (Node* node, FILE* file, struct Vars* VARS)
     }
 }
 
-void draw_left (Node* node, FILE* file, struct Vars* VARS)
+void draw_left (Node* node, FILE* file, Vars* VARS)
 {
     const char* color = NULL;
     if (node->left != NULL)

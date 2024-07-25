@@ -3,8 +3,7 @@
 BUILD := objects
 
 program_SRC := $(wildcard source/*.cpp)
-temp_OBJ := $(program_SRC:.cpp=.o)
-program_OBJ := $(temp_OBJ:source%=$(BUILD)%)
+program_OBJ := $(patsubst source%.cpp,$(BUILD)%.o,$(program_SRC))
 
 FLAGS := -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ \
          -Waggressive-loop-optimizations -Wc++14-compat -Wmissing-declarations \

@@ -1,146 +1,188 @@
-#include "../include/diff.h"
-#include "../include/comp_doub.h"
+#include "../include/diff.hpp"
+#include "../include/comp_doub.hpp"
 
-#define DL diff (node->left, error)
-#define DR diff (node->right, error)
-#define CL copy_tree (node->left, error)
-#define CR copy_tree (node->right, error)
-#define LEFT_NUM node->left->value.number
-#define RIGHT_NUM node->right->value.number
+#define DL              diff (node->left, error)
+#define DR              diff (node->right, error)
+#define CL              copy_tree (node->left, error)
+#define CR              copy_tree (node->right, error)
+#define LEFT_NUM        node->left->value.number
+#define RIGHT_NUM       node->right->value.number
+#define ARE_EQUAL(...)  compare_doubles (__VA_ARGS__) == 0
+#define BOTH_NUMBER     node->right->type == NUM && node->left->type == NUM
+#define RIGHT_IS_NUMBER node->right->type == NUM
+#define LEFT_IS_NUMBER  node->left->type == NUM
 
-Node* dif_add (const Node* node, enum DifError* error)
+Node* dif_add (const Node* node, DifError* error)
 {
+    assert (node != NULL);
     return create_node (OPER, ADD, DL, DR, error);
 }
-Node* dif_sub  (const Node* node, enum DifError* error)
+
+Node* dif_sub  (const Node* node, DifError* error)
 {
+    assert (node != NULL);
     return create_node (OPER, SUB, DL, DR, error);
 }
-Node* dif_mul  (const Node* node, enum DifError* error)
+
+Node* dif_mul  (const Node* node, DifError* error)
 {
-    Node* du = DL;
-    Node* cu = CL;
-    Node* dv = DR;
-    Node* cv = CR;
+    assert (node != NULL);
     Node* res = create_node (OPER, ADD,
-    create_node (OPER, MUL, du, cv, error),
-    create_node (OPER, MUL, cu, dv, error), error);
+                            create_node (OPER, MUL, DL, CR, error),
+                            create_node (OPER, MUL, CL, DR, error),
+                            error);
     return res;
 }
-Node* dif_div  (const Node* node, enum DifError* error)
+
+Node* dif_div  (const Node* node, DifError* error)
 {
-    Node* cu = CL;
-    Node* cv1 = CR;
-    Node* cv2 = CR;
-    Node* du = DL;
-    Node* dv = DR;
+    assert (node != NULL);
     Node* res = create_node (OPER, DIV,
-    create_node (OPER, SUB,
-    create_node (OPER, MUL, du, cv1, error),
-    create_node (OPER, MUL, dv, cu, error), error),
-    create_node (OPER, POW, cv2, create_node (NUM, 0, NULL, NULL, error), error), error);
+                            create_node (OPER, SUB,
+                                        create_node (OPER, MUL, DL, CR, error),
+                                        create_node (OPER, MUL, DR, CL, error),
+                                        error),
+                            create_node (OPER, POW,
+                                        CR,
+                                        create_node (NUM, 0, NULL, NULL, error),
+                                        error),
+                            error);
     return res;
 }
-Node* dif_sin  (const Node* node, enum DifError* error)
+
+Node* dif_sin  (const Node* node, DifError* error)
 {
-    Node* cu = CR;
-    Node* du = DR;
+    assert (node != NULL);
     Node* res = create_node (OPER, MUL,
-    create_node (OPER, COS, NULL, cu, error), du, error);
+                            create_node (OPER, COS, NULL, CR, error),
+                            DR,
+                            error);
     return res;
 }
-Node* dif_cos  (const Node* node, enum DifError* error)
+
+Node* dif_cos  (const Node* node, DifError* error)
 {
-    Node* cu = CR;
-    Node* du = DR;
+    assert (node != NULL);
     Node* res = create_node (OPER, MUL,
-                    create_node (OPER, MUL,
-                        create_node (OPER, SIN, NULL, cu, error),
-                        create_node (NUM, -1, NULL, NULL, error), error),
-                    du, error);
+                            create_node (OPER, MUL,
+                                        create_node (OPER, SIN, NULL, CR, error),
+                                        create_node (NUM, -1, NULL, NULL, error),
+                                        error),
+                            DR,
+                            error);
     return res;
 }
-Node* dif_ln   (const Node* node, enum DifError* error)
+
+Node* dif_ln   (const Node* node, DifError* error)
 {
-    Node* cu = CR;
-    Node* du = DR;
-    Node* res = create_node (OPER, DIV, du, cu, error);
+    assert (node != NULL);
+    Node* res = create_node (OPER, DIV, DR, CR, error);
     return res;
 }
-Node* dif_sqrt (const Node* node, enum DifError* error)
+
+Node* dif_sqrt (const Node* node, DifError* error)
 {
-    Node* cu = copy_tree (node, error);
-    Node* v = create_node (OPER, MUL, create_node (NUM, 2, NULL, NULL, error), cu, error);
-    Node* h = create_node (OPER, DIV, create_node (NUM, 1, NULL, NULL, error), v, error);
-    Node* dv = DR;
-    Node* res = create_node (OPER, MUL, dv, h, error);
+    assert (node != NULL);
+    Node* res = create_node (OPER, MUL,
+                            DR,
+                            create_node (OPER, DIV,
+                                        create_node (NUM, 1, NULL, NULL, error),
+                                        create_node (OPER, MUL,
+                                                    create_node (NUM, 2, NULL, NULL, error),
+                                                    copy_tree (node, error),
+                                                    error),
+                                        error),
+                            error);
     return res;
 }
-Node* dif_pow  (const Node* node, enum DifError* error)
+
+Node* dif_pow  (const Node* node, DifError* error)
 {
-    if (node->right->type == NUM && node->left->type == NUM)
+    assert (node != NULL);
+    if (BOTH_NUMBER)
     {
         return create_node (NUM, 0, NULL, NULL, error);
     }
-    else if (node->right->type == NUM)
+    else if (RIGHT_IS_NUMBER)
     {
-        Node* cu = CL;
-        Node* du = DL;
-        Node* pre_res = create_node (OPER, MUL, create_node (NUM, RIGHT_NUM, NULL, NULL, error),
-        create_node (OPER, POW, cu, create_node (NUM, RIGHT_NUM - 1, NULL, NULL, error), error), error);
-        return create_node (OPER, MUL, pre_res, du, error);
+        return create_node (OPER, MUL,
+                            create_node (OPER, MUL,
+                                        create_node (NUM, RIGHT_NUM, NULL, NULL, error),
+                                        create_node (OPER, POW,
+                                                    CL,
+                                                    create_node (NUM, RIGHT_NUM - 1, NULL, NULL, error),
+                                                    error),
+                                        error),
+                            DL,
+                            error);
     }
-    else if (node->left->type == NUM)
+    else if (LEFT_IS_NUMBER)
     {
-        Node* cu = copy_tree (node, error);
-        Node* du = DR;
-        Node* ln_num = create_node (OPER, LN, NULL, node->left, error);
-        return create_node (OPER, MUL, cu,
-        create_node (OPER, MUL, du, ln_num, error), error);
+        return create_node (OPER, MUL,
+                            copy_tree (node, error),
+                            create_node (OPER, MUL,
+                                        DR,
+                                        create_node (OPER, LN, NULL, node->left, error),
+                                        error),
+                            error);
     }
     else
     {
-        Node* cu = CL;
-        Node* cv = CR;
-        Node* du = DL;
-        Node* dv = DR;
-        Node* res1 = create_node (OPER, MUL, dv, create_node (OPER, LN, NULL, cu, error), error);
-        Node* res2 = create_node (OPER, MUL, du, cv, error);
-        Node* res3 = create_node (OPER, DIV, res2, copy_tree (cu, error), error);
-        Node* res4 = create_node (OPER, ADD, res1, res3, error);
-        Node* res5 = create_node (OPER, POW, copy_tree (cu, error), copy_tree (cv, error), error);
-        return create_node (OPER, MUL, res5, res4, error);
+        return create_node (OPER, MUL,
+                            create_node (OPER, POW,
+                                        copy_tree (CL, error),
+                                        copy_tree (CR, error),
+                                        error),
+                            create_node (OPER, ADD,
+                                        create_node (OPER, MUL,
+                                                    DR,
+                                                    create_node (OPER, LN, NULL, CL, error),
+                                                    error),
+                                        create_node (OPER, DIV,
+                                                    create_node (OPER, MUL, DL, CR, error),
+                                                    copy_tree (CL, error),
+                                                    error),
+                                        error),
+                            error);
     }
 }
-Node* dif_exp (const Node* node, enum DifError* error)
+
+Node* dif_exp (const Node* node, DifError* error)
 {
-    Node* du = DR;
-    Node* cu = CR;
-    return create_node (OPER, MUL, create_node (OPER, EXP, NULL, cu, error), du, error);
+    assert (node != NULL);
+    return create_node (OPER, MUL, create_node (OPER, EXP, NULL, CR, error), DR, error);
 }
-Node* eval_add  (Node* node, enum DifError* error)
+
+Node* eval_add  (Node* node, DifError* error)
 {
+    assert (node != NULL);
     Node* res = create_node (NUM, LEFT_NUM + RIGHT_NUM, NULL, NULL, error);
     tree_dtor (node);
     return res;
 }
-Node* eval_sub  (Node* node, enum DifError* error)
+
+Node* eval_sub  (Node* node, DifError* error)
 {
+    assert (node != NULL);
     Node* res = create_node (NUM, LEFT_NUM - RIGHT_NUM, NULL, NULL, error);
     tree_dtor (node);
     return res;
 }
-Node* eval_mul  (Node* node, enum DifError* error)
+
+Node* eval_mul  (Node* node, DifError* error)
 {
+    assert (node != NULL);
     Node* res = create_node (NUM, LEFT_NUM * RIGHT_NUM, NULL, NULL, error);
     tree_dtor (node);
     return res;
 }
-Node* eval_div  (Node* node, enum DifError* error)
+
+Node* eval_div  (Node* node, DifError* error)
 {
-    if (compare_doubles (RIGHT_NUM, 0))
+    assert (node != NULL);
+    if (ARE_EQUAL(RIGHT_NUM, 0))
     {
-        *error = DIF_DIV_NUL;
+        *error = DIF_ERROR_DIV_NUL;
         return node;
     }
 
@@ -148,29 +190,37 @@ Node* eval_div  (Node* node, enum DifError* error)
     tree_dtor (node);
     return res;
 }
-Node* eval_pow  (Node* node, enum DifError* error)
+
+Node* eval_pow  (Node* node, DifError* error)
 {
+    assert (node != NULL);
     Node* res = create_node (NUM, pow (LEFT_NUM, RIGHT_NUM), NULL, NULL, error);
     tree_dtor (node);
     return res;
 }
-Node* eval_sin  (Node* node, enum DifError* error)
+
+Node* eval_sin  (Node* node, DifError* error)
 {
+    assert (node != NULL);
     Node* res = create_node (NUM, sin (RIGHT_NUM), NULL, NULL, error);
     tree_dtor (node);
     return res;
 }
-Node* eval_cos  (Node* node, enum DifError* error)
+
+Node* eval_cos  (Node* node, DifError* error)
 {
+    assert (node != NULL);
     Node* res = create_node (NUM, cos (RIGHT_NUM), NULL, NULL, error);
     tree_dtor (node);
     return res;
 }
-Node* eval_ln (Node* node, enum DifError* error)
+
+Node* eval_ln (Node* node, DifError* error)
 {
-    if (compare_doubles (RIGHT_NUM, 0))
+    assert (node != NULL);
+    if (ARE_EQUAL(RIGHT_NUM, 0))
     {
-        *error = DIF_DIV_NUL;
+        *error = DIF_ERROR_DIV_NUL;
         return node;
     }
 
@@ -178,46 +228,56 @@ Node* eval_ln (Node* node, enum DifError* error)
     tree_dtor (node);
     return res;
 }
-Node* eval_sqrt (Node* node, enum DifError* error)
+
+Node* eval_sqrt (Node* node, DifError* error)
 {
+    assert (node != NULL);
     Node* res = create_node (NUM, sqrt (RIGHT_NUM), NULL, NULL, error);
     tree_dtor (node);
     return res;
 }
-Node* eval_exp (Node* node, enum DifError* error)
+
+Node* eval_exp (Node* node, DifError* error)
 {
+    assert (node != NULL);
     Node* res = create_node (NUM, exp (RIGHT_NUM), NULL, NULL, error);
     tree_dtor (node);
     return res;
 }
-Node* smp_add (Node* node, bool*, enum DifError* error)
+
+Node* smp_add (Node* node, bool*, DifError* error)
 {
+    assert (node != NULL);
     *error = DIF_NO_ERROR;
     return node;
 }
-Node* smp_sub (Node* node, bool*, enum DifError* error)
+
+Node* smp_sub (Node* node, bool*, DifError* error)
 {
+    assert (node != NULL);
     *error = DIF_NO_ERROR;
     return node;
 }
-Node* smp_mul (Node* node, bool* change, enum DifError* error)
+
+Node* smp_mul (Node* node, bool* change, DifError* error)
 {
-    if (node->left != NULL && node->left->type == NUM && compare_doubles (LEFT_NUM, 1))
+    assert (node != NULL);
+    if (node->left != NULL && LEFT_IS_NUMBER && ARE_EQUAL (LEFT_NUM, 1))
     {
         *change = true;
         Node* res = copy_tree (node->right, error);
         tree_dtor (node);
         return res;
     }
-    if (node->right != NULL && node->right->type == NUM && compare_doubles (RIGHT_NUM, 1))
+    if (node->right != NULL && RIGHT_IS_NUMBER && ARE_EQUAL(RIGHT_NUM, 1))
     {
         *change = true;
         Node* res = copy_tree (node->left, error);
         tree_dtor (node);
         return res;
     }
-    if ((node->left != NULL && node->left->type == NUM && compare_doubles (LEFT_NUM, 0)) ||
-        (node->right != NULL && node->right->type == NUM && compare_doubles (RIGHT_NUM, 0)))
+    if ((node->left != NULL && LEFT_IS_NUMBER && ARE_EQUAL(LEFT_NUM, 0)) ||
+        (node->right != NULL && RIGHT_IS_NUMBER && ARE_EQUAL(RIGHT_NUM, 0)))
     {
         *change = true;
         tree_dtor (node);
@@ -225,75 +285,89 @@ Node* smp_mul (Node* node, bool* change, enum DifError* error)
     }
     return node;
 }
-Node* smp_div (Node* node, bool* change, enum DifError* error)
+
+Node* smp_div (Node* node, bool* change, DifError* error)
 {
-    if (node->right != NULL && node->right->type == NUM && compare_doubles (RIGHT_NUM, 1))
+    assert (node != NULL);
+    if (node->right != NULL && RIGHT_IS_NUMBER && ARE_EQUAL(RIGHT_NUM, 1))
     {
         *change = true;
         Node* res = copy_tree (node->left, error);
         tree_dtor (node);
         return res;
     }
-    if (node->left != NULL && node->left->type == NUM && compare_doubles (LEFT_NUM, 0))
+    if (node->left != NULL && LEFT_IS_NUMBER && ARE_EQUAL(LEFT_NUM, 0))
     {
         *change = true;
         tree_dtor (node);
         return create_node (NUM, 0, NULL, NULL, error);
     }
-    if (node->right != NULL && node->right->type == NUM && compare_doubles (RIGHT_NUM, 0))
+    if (node->right != NULL && RIGHT_IS_NUMBER && ARE_EQUAL(RIGHT_NUM, 0))
     {
-        *error = DIF_DIV_NUL;
+        *error = DIF_ERROR_DIV_NUL;
         return node;
     }
     return node;
 }
-Node* smp_sin (Node* node, bool*, enum DifError* error)
+
+Node* smp_sin (Node* node, bool*, DifError* error)
 {
+    assert (node != NULL);
     *error = DIF_NO_ERROR;
     return node;
 }
-Node* smp_cos (Node* node, bool*, enum DifError* error)
+
+Node* smp_cos (Node* node, bool*, DifError* error)
 {
+    assert (node != NULL);
     *error = DIF_NO_ERROR;
     return node;
 }
-Node* smp_ln (Node* node, bool*, enum DifError* error)
+
+Node* smp_ln (Node* node, bool*, DifError* error)
 {
+    assert (node != NULL);
     *error = DIF_NO_ERROR;
     return node;
 }
-Node* smp_sqrt (Node* node, bool*, enum DifError* error)
+
+Node* smp_sqrt (Node* node, bool*, DifError* error)
 {
+    assert (node != NULL);
     *error = DIF_NO_ERROR;
     return node;
 }
-Node* smp_exp (Node* node, bool*, enum DifError* error)
+
+Node* smp_exp (Node* node, bool*, DifError* error)
 {
+    assert (node != NULL);
     *error = DIF_NO_ERROR;
     return node;
 }
-Node* smp_pow  (Node* node, bool* change, enum DifError* error)
+
+Node* smp_pow  (Node* node, bool* change, DifError* error)
 {
-    if (node->left != NULL && node->left->type == NUM && compare_doubles (LEFT_NUM, 1))
+    assert (node != NULL);
+    if (node->left != NULL && LEFT_IS_NUMBER && ARE_EQUAL(LEFT_NUM, 1))
     {
         *change = true;
         tree_dtor (node);
         return create_node (NUM, 1, NULL, NULL, error);
     }
-    if (node->right != NULL && node->right->type == NUM && compare_doubles (RIGHT_NUM, 1))
+    if (node->right != NULL && RIGHT_IS_NUMBER && ARE_EQUAL(RIGHT_NUM, 1))
     {
         *change = true;
         Node* res = copy_tree (node->left, error);
         tree_dtor (node);
         return res;
     }
-    if (node->left != NULL && node->left->type == NUM && compare_doubles (LEFT_NUM, 0))
+    if (node->left != NULL && LEFT_IS_NUMBER && ARE_EQUAL(LEFT_NUM, 0))
     {
         *change = true;
         tree_dtor (node);
         return create_node (NUM, 0, NULL, NULL, error);
     }
-    if (node->right != NULL && node->right->type == NUM && compare_doubles (RIGHT_NUM, 0))
+    if (node->right != NULL && RIGHT_IS_NUMBER && ARE_EQUAL(RIGHT_NUM, 0))
     {
         *change = true;
         tree_dtor (node);
