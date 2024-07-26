@@ -16,10 +16,10 @@ int main (const int argc, const char* argv[])
         return 0;
     }
 
-    const char* NAME = argv[1];
-    Vars VARS[MAX_N_VARS] = {};
+    const char* name_of_express_file = argv[1];
+    Vars vars[MAX_N_VARS] = {};
 
-    FILE* source = fopen (NAME, "r");
+    FILE* source = fopen (name_of_express_file, "r");
     FILE* log_file = fopen ("log_file.txt", "w");
     FILE* text_tree = fopen ("text_tree.txt", "w");
     FILE* g_viz = fopen ("graphviz.txt", "w");
@@ -36,8 +36,9 @@ int main (const int argc, const char* argv[])
 
     size_t size = 0;
     char* expression = NULL;
-    dif_error = read_file (NAME, &expression, &size);
+    dif_error = read_file (source, name_of_express_file, &expression, &size);
     dif_print_error (dif_error);
+    fclose (source);
 
     Tokens* tok = (Tokens*) calloc (size, sizeof (Tokens));
 
@@ -46,7 +47,7 @@ int main (const int argc, const char* argv[])
 
     dif_print_error (dif_error);
 
-    dif_error = token (tok, VARS, expression, MAX_N_VARS);
+    dif_error = token (tok, vars, expression, MAX_N_VARS);
     dif_print_error (dif_error);
 
     int n_tok = 0;
@@ -60,7 +61,7 @@ int main (const int argc, const char* argv[])
         return 0;
     }
 
-    dif_error = graphviz (root, g_viz, VARS);
+    dif_error = graphviz (root, g_viz, vars);
 
     int n_space = 0;
     print_tree_txt_incr_tabs (root, text_tree, &n_space);
@@ -71,6 +72,5 @@ int main (const int argc, const char* argv[])
 
     free (tok);
     fclose (text_tree);
-    fclose (source);
     return 0;
 }

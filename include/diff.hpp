@@ -90,7 +90,8 @@ enum DifError
     DIF_ERROR_LN_NUL       = 13,
     DIF_ERROR_FGETS        = 14,
     DIF_ERROR_x0           = 15,
-    DIF_ERROR_N            = 16
+    DIF_ERROR_N            = 16,
+    DIF_ERROR_N_VARS       = 17
 };
 
 struct DifOps
@@ -169,8 +170,8 @@ void          print_connections        (Node* node, FILE* file, Vars* VARS);
 void          draw_right               (Node* node, FILE* file, Vars* VARS);
 void          draw_left                (Node* node, FILE* file, Vars* VARS);
 Node*         diff                     (const Node* node, DifError* error);
-DifError      read_file                (const char* NAME, char** buffer, size_t* size);
-DifError      token                    (Tokens* tok, Vars* VARS, char* buffer, int MAX_N_VARS);
+DifError      read_file                (FILE* file, const char* file_name, char** buffer, size_t* size);
+DifError      token                    (Tokens* tok, Vars* vars, char* buffer, int MAX_N_VARS);
 void          skip_space               (char** str);
 void          token_dump               (Tokens* tok, int n_tok, Vars* VARS);
 Node*         simplification           (Node* node, DifError* error);
@@ -180,5 +181,6 @@ void          taylor                   (Node* node, DifError* error);
 int           fact                     (int n);
 Node*         change_x0                (Node* node, double x0);
 const char*   get_oper_name            (Oper oper);
+int           search_var               (Vars* vars, int n_vars, const char* begin, size_t len);
 
 #endif // DIFF_H

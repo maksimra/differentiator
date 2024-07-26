@@ -6,6 +6,8 @@ static FILE* log_file = stderr;
 
 const int NUM_OF_CHAR_TO_ANSW = 10;
 
+const int NOT_VAR = -1;
+
 const int NOT_OPER = -1;
 
 const int NUM_OF_OPERS = sizeof (OP) / sizeof (OP[0]);
@@ -16,13 +18,11 @@ DifError dif_set_log_file (FILE* file)
     return DIF_NO_ERROR;
 }
 
-DifError read_file (const char* NAME, char** buffer, size_t* size)
+DifError read_file (FILE* file, const char* file_name, char** buffer, size_t* size)
 {
     struct stat statbuf = {};
 
-    FILE* file = fopen (NAME, "r");
-
-    if (stat (NAME, &statbuf))
+    if (stat (file_name, &statbuf))
         return DIF_ERROR_STAT;
 
     *buffer = (char*) calloc ((size_t) statbuf.st_size + sizeof (char), sizeof (char));
@@ -38,36 +38,34 @@ DifError read_file (const char* NAME, char** buffer, size_t* size)
         return DIF_ERROR_FREAD;
     }
 
-    fclose (file);
-
     return DIF_NO_ERROR;
 }
 
 int search_oper (const char* str, size_t len)
 {
     for (int n_oper = 0; n_oper < NUM_OF_OPERS; n_oper ++)
-    {
         if (strncmp (str, OP[n_oper].name, len) == 0)
-        {
             return n_oper;
-        }
-    }
+
     return NOT_OPER;
 }
 
 void printf_str (FILE* file, const Node* node, int n_space)
 {
-    if (node->type == OPER)
+    switch (node->type)
     {
-        fprintf (file, "%*c(\"%s\"\n", n_space, ' ', get_oper_name (node->value.oper));
-    }
-    else if (node->type == VAR)
-    {
-        fprintf (file, "%*c(\"<%d>\"\n", n_space, ' ', node->value.n_var);
-    }
-    else
-    {
-        fprintf (file, "%*c(\"%.3lf\"\n", n_space, ' ', node->value.number);
+        case OPER:
+            fprintf (file, "%*c(\"%s\"\n", n_space, ' ', get_oper_name (node->value.oper));
+            return;
+        case VAR:
+            fprintf (file, "%*c(\"<%d>\"\n", n_space, ' ', node->value.n_var);
+            return;
+        case NUM:
+            fprintf (file, "%*c(\"%.3lf\"\n", n_space, ' ', node->value.number);
+            return;
+        case TXT:
+        default:
+            assert (0);
     }
 }
 
@@ -208,6 +206,8 @@ const char* dif_get_error (DifError error)
             return "Dif: Ошибка считывания x0.";
         case DIF_ERROR_N:
             return "Dif: Ошибка считывания степени разложения.";
+        case DIF_ERROR_N_VARS:
+            return "Dif: Слишком много переменных.";
         default:
             return "Dif: Куда делся мой enum ошибок?";
     }
@@ -229,90 +229,123 @@ Node* diff (const Node* node, DifError* error)
     }
 }
 
-DifError token (Tokens* TOK, Vars* VARS, char* buffer, int MAX_N_VARS)
+DifError token (Tokens* tok, Vars* vars, char* buffer, int MAX_N_VARS)
 {
+    bool point_was = false;
+    char* start_pos = NULL;
     int n_tok = 0;
     double num = 0;
-    int n_var = 0;
+    int n_vars = 0;
+    int n_var = NOT_VAR;
+    int n_oper = NOT_OPER;
     while (*buffer != '$')
     {
         skip_space (&buffer);
-        char* start_pos = buffer;
-        bool is_alpha = false;
-        while (isalpha (*buffer))
+        start_pos = buffer;
+        switch (*buffer)
         {
-            is_alpha = true;
-            buffer++;
-        }
-
-        if (is_alpha == false && (*buffer == '+' ||
-                                  *buffer == '-' ||
-                                  *buffer == '*' ||
-                                  *buffer == '/' ||
-                                  *buffer == '^'))
-        {
-            is_alpha = true;
-            buffer++;
-        }
-
-        if (is_alpha == true)
-        {
-            int n_oper = search_oper (start_pos, (size_t) (buffer - start_pos));
-            if (n_oper == NOT_OPER)
-            {
-                assert (n_var < MAX_N_VARS);
-
-                TOK[n_tok].type = VAR;
-                TOK[n_tok].elem.n_var = n_var;
-
-                VARS[n_var].num = n_var;
-                VARS[n_var].len = (size_t) (buffer - start_pos);
-                VARS[n_var].name = start_pos;
-
-                n_var++;
-                n_tok++;
-                continue;
-            }
-            else
-            {
-                TOK[n_tok].type = OPER;
-                TOK[n_tok].elem.oper = (Oper) n_oper;
-                n_tok++;
-                continue;
-            }
-        }
-
-        bool was_point = false;
-
-        while (isdigit (*buffer))
-        {
-            buffer++;
-            if (*buffer == '.' && was_point == false)
+            case '+':
+            case '-':
+            case '*':
+            case '/':
+            case '^':
                 buffer++;
-        }
+                n_oper = search_oper (start_pos, (size_t) (buffer - start_pos));
+                tok[n_tok].type = OPER;
+                tok[n_tok].elem.oper = (Oper) n_oper;
+                n_tok++;
+                continue;
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                sscanf (start_pos, "%lf", &num);
+                point_was = false;
+                while (isdigit(*buffer))
+                {
+                    buffer++;
+                    if (*buffer == '.' && point_was == false)
+                    {
+                        buffer++;
+                        point_was = true;
+                    }
+                }
+                tok[n_tok].type = NUM;
+                tok[n_tok].elem.num = num;
+                n_tok++;
+                continue;
+            case '(':
+            case ')':
+                buffer++;
+                tok[n_tok].type = TXT;
+                tok[n_tok].elem.symbol = *start_pos;
+                n_tok++;
+                continue;
+            default:
+                if (isalpha (*buffer))
+                {
+                    buffer++;
+                    while (isalpha (*buffer))
+                        buffer++;
 
-        if (sscanf (start_pos, "%lf", &num) != 0)
-        {
-            TOK[n_tok].type = NUM;
-            TOK[n_tok].elem.num = num;
-            n_tok++;
-            continue;
-        }
+                    n_oper = search_oper (start_pos, (size_t) (buffer - start_pos));
+                    if (n_oper != NOT_OPER)
+                    {
+                        tok[n_tok].type = OPER;
+                        tok[n_tok].elem.oper = (Oper) n_oper;
+                        n_tok++;
+                        continue;
+                    }
+                    else
+                    {
+                        tok[n_tok].type = VAR;
+                        n_var = search_var (vars, n_vars, start_pos, (size_t) (buffer - start_pos));
+                        if (n_var != NOT_VAR)
+                        {
+                            tok[n_tok].elem.n_var = n_var;
+                            n_tok++;
+                            continue;
+                        }
+                        else
+                        {
+                            if (n_vars > MAX_N_VARS)
+                                return DIF_ERROR_N_VARS;
 
-        if (*buffer == '(' || *buffer == ')')
-        {
-            buffer++;
-            TOK[n_tok].type = TXT;
-            TOK[n_tok].elem.symbol = *start_pos;
-            n_tok++;
-            continue;
+                            vars[n_vars].num = n_vars;
+                            vars[n_vars].len = (size_t) (buffer - start_pos);
+                            vars[n_vars].name = start_pos;
+
+                            tok[n_tok].elem.n_var = n_vars;
+                            n_vars++;
+                            n_tok++;
+                            continue;
+                        }
+                    }
+                }
+                return DIF_ERROR_SYNTAX;
+
+
         }
-        return DIF_ERROR_SYNTAX;
     }
-    TOK[n_tok].type = TXT;
-    TOK[n_tok].elem.symbol = '$';
-    token_dump (TOK, n_tok, VARS);
+    tok[n_tok].type = TXT;
+    tok[n_tok].elem.symbol = '$';
+    token_dump (tok, n_tok, vars);
     return DIF_NO_ERROR;
+}
+
+int search_var (Vars* vars, int n_vars, const char* begin, size_t len)
+{
+    for (int number_of_var = 0; number_of_var < n_vars; number_of_var++)
+        if (strncmp (begin, vars[number_of_var].name, len) == 0)
+            return number_of_var;
+
+    return NOT_VAR;
 }
 
 const char* get_oper_name (Oper oper)
