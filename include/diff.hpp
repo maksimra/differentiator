@@ -154,7 +154,7 @@ const DifOps OP[] =
 const int N_FUNC = sizeof (OP) / sizeof (OP[0]);
 
 int           search_oper              (const char* str, size_t len);
-void          print_tree_txt_incr_tabs (Node* node, FILE* file, int* n_space);
+void          print_tree_txt_incr_tabs (Node* node, FILE* file);
 void          print_node_or_decr_tabs  (Node* node, FILE* file, int* n_space);
 void          printf_str               (FILE* file, const Node* node, int n_space);
 DifError      dif_set_log_file         (FILE* file);
@@ -163,7 +163,7 @@ void          dif_print_error          (DifError error);
 void          tree_dtor                (Node* root);
 Node*         copy_tree                (const Node* node, DifError* error);
 Node*         create_node              (Type type, double value, Node* left, Node* right, DifError* error);
-DifError      graphviz                 (const Node* node, FILE* file, const Vars* vars);
+void          graphviz                 (const Node* node, FILE* file, const Vars* vars);
 void          print_start              (FILE* file);
 void          print_end                (FILE* file);
 void          print_connections        (const Node* node, FILE* file, const Vars* vars);
@@ -177,7 +177,7 @@ void          token_dump               (const Tokens* tok, int n_tok, const Vars
 Node*         simplification           (Node* node, DifError* error);
 Node*         zeros_and_ones           (Node* node, bool* change, DifError* error);
 Node*         count_const              (Node* node, bool* change, DifError* error);
-void          taylor                   (Node* node, DifError* error);
+DifError      taylor                   (const Node* node);
 int           fact                     (int n);
 Node*         change_x0                (Node* node, double x0);
 const char*   get_oper_name            (Oper oper);
@@ -190,5 +190,6 @@ bool          try_var                  (Tokens* tok, int n_tok, Vars* vars, int*
 void          fill_token_oper          (Tokens* tok, int n_tok, int n_oper);
 size_t        fill_token_double        (Tokens* tok, int n_tok, const char* buffer);
 int           search_char_operation    (const char* buffer);
+DifError      print_decompose          (const Node* node, double x0, int accuracy);
 
 #endif // DIFF_H

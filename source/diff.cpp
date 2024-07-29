@@ -73,7 +73,7 @@ void print_node_or_decr_tabs (Node* node, FILE* file, int* n_space)
 {
     if (node != NULL)
     {
-        print_tree_txt_incr_tabs (node, file, n_space);
+        print_tree_txt_incr_tabs (node, file);
     }
     else
     {
@@ -82,13 +82,14 @@ void print_node_or_decr_tabs (Node* node, FILE* file, int* n_space)
     }
 }
 
-void print_tree_txt_incr_tabs (Node* node, FILE* file, int* n_space)
+void print_tree_txt_incr_tabs (Node* node, FILE* file)
 {
-    printf_str (file, node, *n_space);
-    (*n_space) += 4;
+    static int n_space = 0;
+    printf_str (file, node, n_space);
+    n_space += 4;
 
-    print_node_or_decr_tabs (node->left, file, n_space);
-    print_node_or_decr_tabs (node->right, file, n_space);
+    print_node_or_decr_tabs (node->left, file, &n_space);
+    print_node_or_decr_tabs (node->right, file, &n_space);
 
     fprintf (file, ")\n");
 }
@@ -490,80 +491,83 @@ Node* count_const (Node* node, bool* change, DifError* error)
     return node;
 }
 
-void taylor (Node* node, DifError* error)
+DifError taylor (const Node* node)
 {
     printf ("Hello! Would you like to decompose the expression? ('yes' or 'no')\n");
     char answer[NUM_OF_CHAR_TO_ANSW] = {};
     if (fgets (answer, NUM_OF_CHAR_TO_ANSW, stdin) == NULL)
-        *error = DIF_ERROR_FGETS;
+        return DIF_ERROR_FGETS;
     if (strncmp (answer, "no\n", NUM_OF_CHAR_TO_ANSW) == 0)
     {
         printf ("Sadly :(\n");
-        return;
+        return DIF_NO_ERROR;
     }
     if (strncmp (answer, "yes\n", NUM_OF_CHAR_TO_ANSW) == 0)
     {
         double x0 = NAN;
-        int n = 0;
+        int accuracy = 0;
         printf ("In the vicinity of which x? (enter a number)\n");
 
         if (scanf ("%lf", &x0) == 0)
-            *error = DIF_ERROR_x0;
+            return DIF_ERROR_x0;
 
         printf ("To what extent? (enter a number)\n");
 
-        if (scanf ("%d", &n) == 0)
-            *error = DIF_ERROR_N;
+        if (scanf ("%d", &accuracy) == 0)
+            return DIF_ERROR_N;
 
-        printf ("Processing...\n");
-
-        printf ("y = ");
-
-        Node* change_node = NULL;
-        Node* prev_node = NULL;
-        Node* cpy_node = copy_tree (node, error);
-
-        for (int i = 0; i <= n; i++)
-        {
-            prev_node = cpy_node;
-            if (i > 0)
-            {
-                Node* temp_node = diff (cpy_node, error);
-                if (*error != DIF_NO_ERROR)
-                {
-                    tree_dtor (cpy_node);
-                    return;
-                }
-                cpy_node = temp_node;
-                tree_dtor (prev_node);
-            }
-
-            change_node = copy_tree (cpy_node, error);
-            change_node = change_x0 (change_node, x0);
-            prev_node = change_node;
-            change_node = simplification (change_node, error);
-
-            if (*error != DIF_NO_ERROR)
-            {
-                printf ("\n%s\n", dif_get_error (*error));
-                tree_dtor (prev_node);
-                tree_dtor (cpy_node);
-                return;
-            }
-
-            tree_dtor (prev_node);
-            printf ("%lf * (x - %lf)^%d / %d + ", change_node->value.number, x0, i, fact (i));
-            tree_dtor (change_node);
-        }
-        tree_dtor (cpy_node);
-
-        printf ("o (x - %lf)^%d\n", x0, n);
-        printf ("It was difficult.\n");
+        return print_decompose (node, x0, accuracy);
     }
     else
     {
         printf ("Goodbye!\n");
+        return DIF_NO_ERROR;
     }
+}
+
+DifError print_decompose (const Node* node, double x0, int accuracy)
+{
+    DifError error = DIF_NO_ERROR;
+    printf ("Processing...\n");
+    printf ("y = ");
+
+    Node* change_node = NULL;
+    Node* prev_node = NULL;
+    Node* copy_node = copy_tree (node, &error);
+    for (int i = 0; i <= accuracy; i++)
+    {
+        prev_node = copy_node;
+        if (i > 0)
+        {
+            Node* temp_node = diff (copy_node, &error);
+            if (error != DIF_NO_ERROR)
+            {
+                tree_dtor (copy_node);
+                return error;
+            }
+            copy_node = temp_node;
+            tree_dtor (prev_node);
+        }
+        change_node = copy_tree (copy_node, &error);
+        change_node = change_x0 (change_node, x0);
+        prev_node = change_node;
+        change_node = simplification (change_node, &error);
+        if (error != DIF_NO_ERROR)
+        {
+            printf ("\n%s\n", dif_get_error (error));
+            tree_dtor (prev_node);
+            tree_dtor (copy_node);
+            return error;
+        }
+        tree_dtor (prev_node);
+        printf ("%lf * (x - %lf)^%d / %d + ", change_node->value.number, x0, i, fact (i));
+        tree_dtor (change_node);
+    }
+    tree_dtor (copy_node);
+    printf ("o (x - %lf)^%d\n", x0, accuracy);
+    printf ("It was difficult.\n");
+
+    return error;
 }
 
 int fact (int n)

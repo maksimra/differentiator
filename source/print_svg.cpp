@@ -1,6 +1,6 @@
 #include "../include/diff.hpp"
 
-DifError graphviz (const Node* node, FILE* file, const Vars* VARS)
+void graphviz (const Node* node, FILE* file, const Vars* VARS)
 {
     assert (node != NULL);
     assert (file != NULL);
@@ -14,7 +14,6 @@ DifError graphviz (const Node* node, FILE* file, const Vars* VARS)
 
     const char* cmd = "dot graphviz.txt -Tsvg -otree.svg";
     system (cmd);
-    return DIF_NO_ERROR;
 }
 
 void print_start (FILE* file)

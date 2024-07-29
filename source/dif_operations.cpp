@@ -122,7 +122,7 @@ Node* dif_pow  (const Node* node, DifError* error)
                             copy_tree (node, error),
                             create_node (OPER, MUL,
                                         DR,
-                                        create_node (OPER, LN, NULL, node->left, error),
+                                        create_node (OPER, LN, NULL, CL, error),
                                         error),
                             error);
     }
