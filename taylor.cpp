@@ -10,9 +10,8 @@ int main (const int argc, const char* argv[])
     DifError dif_error = DIF_NO_ERROR;
     ArgsError args_error = args_check (argc, argv, necessary_n_args);
 
-    if (args_error != ARGS_NO_ERROR)
+    if (args_print_if_error (args_error))
     {
-        args_print_error (args_error);
         return 0;
     }
 

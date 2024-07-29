@@ -6,8 +6,6 @@
 
 static FILE* log_file = stderr;
 
-static const int necessary_n_args = 2;
-
 void args_set_log_file (FILE* file)
 {
     log_file = file;
@@ -20,7 +18,7 @@ ArgsError args_check (const int argc, const char** argv, int ref_argc)
         return ARGS_ERROR_ARGC;
 
     FILE* file = fopen (argv[1], "r"); // TODO: функция должна вместо этого
-                                       // смотреть флаги. (спросить лично у Коли)
+                                       // смотреть флаги. (не понял, спросить лично потом)
     if (file == NULL)
         return ARGS_ERROR_ARGV;
 
@@ -29,9 +27,14 @@ ArgsError args_check (const int argc, const char** argv, int ref_argc)
     return ARGS_NO_ERROR;
 }
 
-void args_print_error (ArgsError error)
+bool args_print_if_error (ArgsError error)
 {
-    PRINT ("%s\n", args_get_error (error));
+    if (error != ARGS_NO_ERROR)
+    {
+        PRINT ("%s\n", args_get_error (error));
+        return true;
+    }
+    return false;
 }
 
 const char* args_get_error (ArgsError error)
