@@ -1,17 +1,16 @@
 #include "../include/parser.hpp"
 
-#define CUR_TYPE tok[n_tok].type
-#define CUR_OPER tok[n_tok].elem.oper
-#define PREV_OPER tok[n_tok - 1].elem.oper
-
-static int n_tok = 0;
+#define CUR_TYPE tok[*n_tok].type
+#define CUR_OPER tok[*n_tok].elem.oper
+#define PREV_OPER tok[*n_tok - 1].elem.oper
 
 Node* parse (DifError* error, const Tokens* tok)
 {
-    Node* val = get_e (error, tok);
+    int n_tok = 0;
+    Node* val = get_e (error, tok, &n_tok);
 
-    if ((CUR_TYPE != TYPE_TXT) ||
-        (CUR_TYPE == TYPE_TXT && tok[n_tok].elem.symbol != '$'))
+    if ((tok[n_tok].type != TYPE_TXT) ||
+        (tok[n_tok].type == TYPE_TXT && tok[n_tok].elem.symbol != '$'))
     {
         fprintf (stderr, "Не смогли обработать выражение :(\n");
         *error = DIF_ERROR_SYNTAX;
@@ -20,14 +19,14 @@ Node* parse (DifError* error, const Tokens* tok)
     return val;
 }
 
-Node* get_e (DifError* error, const Tokens* tok)
+Node* get_e (DifError* error, const Tokens* tok, int* n_tok)
 {
     Node* val = NULL;
     if (CUR_TYPE == TYPE_OPER && CUR_OPER == OPER_SUB)
     {
-        n_tok++;
+        (*n_tok)++;
 
-        if (couple_oper (tok) == true)
+        if (couple_oper (tok, *n_tok) == true)
         {
             *error = DIF_ERROR_SYNTAX;
             fprintf (stderr, "Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
@@ -36,19 +35,19 @@ Node* get_e (DifError* error, const Tokens* tok)
             return NULL;
         }
 
-        val = create_node (TYPE_OPER, OPER_MUL, create_node (TYPE_NUM, -1, NULL, NULL, error), get_t (error, tok), error);
+        val = create_node (TYPE_OPER, OPER_MUL, create_node (TYPE_NUM, -1, NULL, NULL, error), get_t (error, tok, n_tok), error);
     }
     else
     {
-        val = get_t (error, tok);
+        val = get_t (error, tok, n_tok);
     }
     while (CUR_TYPE == TYPE_OPER && (CUR_OPER == OPER_ADD ||
     CUR_OPER == OPER_SUB))
     {
-        int old_n_tok = n_tok;
-        n_tok++;
+        int old_n_tok = *n_tok;
+        (*n_tok)++;
 
-        if (couple_oper (tok) == true)
+        if (couple_oper (tok, *n_tok) == true)
         {
             *error = DIF_ERROR_SYNTAX;
             fprintf (stderr, "Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
@@ -58,7 +57,7 @@ Node* get_e (DifError* error, const Tokens* tok)
             return NULL;
         }
 
-        Node* val2 = get_t (error, tok);
+        Node* val2 = get_t (error, tok, n_tok);
         if (tok[old_n_tok].elem.oper == OPER_ADD)
             val = create_node (TYPE_OPER, OPER_ADD, val, val2, error);
         else
@@ -67,14 +66,14 @@ Node* get_e (DifError* error, const Tokens* tok)
     return val;
 }
 
-Node* get_k (DifError* error, const Tokens* tok)
+Node* get_k (DifError* error, const Tokens* tok, int* n_tok)
 {
-    Node* val = get_p (error, tok);
+    Node* val = get_p (error, tok, n_tok);
     if (CUR_TYPE == TYPE_OPER && CUR_OPER == OPER_POW)
     {
-        n_tok++;
+        (*n_tok)++;
 
-        if (couple_oper (tok) == true)
+        if (couple_oper (tok, *n_tok) == true)
         {
             *error = DIF_ERROR_SYNTAX;
             fprintf (stderr, "Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
@@ -84,7 +83,7 @@ Node* get_k (DifError* error, const Tokens* tok)
             return NULL;
         }
 
-        Node* val2 = get_p (error, tok);
+        Node* val2 = get_p (error, tok, n_tok);
         val = create_node (TYPE_OPER, OPER_POW, val, val2, error);
 
         if (CUR_TYPE == TYPE_OPER && CUR_OPER == OPER_POW)
@@ -97,12 +96,12 @@ Node* get_k (DifError* error, const Tokens* tok)
     return val;
 }
 
-Node* get_s (DifError* error, const Tokens* tok)
+Node* get_s (DifError* error, const Tokens* tok, int* n_tok)
 {
     if (CUR_TYPE == TYPE_OPER)
     {
         int n_oper = CUR_OPER;
-        n_tok++;
+        (*n_tok)++;
 
         if (CUR_TYPE == TYPE_OPER)
         {
@@ -113,7 +112,7 @@ Node* get_s (DifError* error, const Tokens* tok)
             return NULL;
         }
 
-        if (CUR_TYPE == TYPE_TXT && tok[n_tok].elem.symbol != '(')
+        if (CUR_TYPE == TYPE_TXT && tok[*n_tok].elem.symbol != '(')
         {
             *error = DIF_ERROR_SYNTAX;
             fprintf (stderr, "Введено некорректное выражение:"
@@ -122,13 +121,13 @@ Node* get_s (DifError* error, const Tokens* tok)
             return NULL;
         }
 
-        n_tok++;
-        Node* val = get_e (error, tok);
+        (*n_tok)++;
+        Node* val = get_e (error, tok, n_tok);
 
-        if (CUR_TYPE == TYPE_TXT && tok[n_tok].elem.symbol != ')')
+        if (CUR_TYPE == TYPE_TXT && tok[*n_tok].elem.symbol != ')')
             *error = DIF_ERROR_SYNTAX;
 
-        n_tok++;
+        (*n_tok)++;
 
         switch (OPER_ARRAY[n_oper].op_enum)
         {
@@ -157,37 +156,37 @@ Node* get_s (DifError* error, const Tokens* tok)
                 *error = DIF_ERROR_FUNC;
         }
     }
-    return get_k (error, tok);
+    return get_k (error, tok, n_tok);
 }
 
-Node* get_p (DifError* error, const Tokens* tok)
+Node* get_p (DifError* error, const Tokens* tok, int* n_tok)
 {
-    if (CUR_TYPE == TYPE_TXT && tok[n_tok].elem.symbol == '(')
+    if (CUR_TYPE == TYPE_TXT && tok[*n_tok].elem.symbol == '(')
     {
-        n_tok++;
-        Node* val = get_e (error, tok);
+        (*n_tok)++;
+        Node* val = get_e (error, tok, n_tok);
 
-        if (CUR_TYPE == TYPE_TXT && tok[n_tok].elem.symbol != ')')
+        if (CUR_TYPE == TYPE_TXT && tok[*n_tok].elem.symbol != ')')
             *error = DIF_ERROR_SYNTAX;
 
-        n_tok++;
+        (*n_tok)++;
 
         return val;
     }
-    Node* val = get_n (error, tok);
+    Node* val = get_n (error, tok, n_tok);
     return val;
 }
 
-Node* get_t (DifError* error, const Tokens* tok)
+Node* get_t (DifError* error, const Tokens* tok, int* n_tok)
 {
-    Node* val = get_s (error, tok);
+    Node* val = get_s (error, tok, n_tok);
     while (CUR_TYPE == TYPE_OPER && (CUR_OPER == OPER_MUL
     || CUR_OPER == OPER_DIV))
     {
-        int old_n_tok = n_tok;
-        n_tok++;
+        int old_n_tok = *n_tok;
+        (*n_tok)++;
 
-        if (couple_oper (tok) == true)
+        if (couple_oper (tok, *n_tok) == true)
         {
             *error = DIF_ERROR_SYNTAX;
             fprintf (stderr, "Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
@@ -197,7 +196,7 @@ Node* get_t (DifError* error, const Tokens* tok)
             return NULL;
         }
 
-        Node* val2 = get_s (error, tok);
+        Node* val2 = get_s (error, tok, n_tok);
 
         if (tok[old_n_tok].elem.oper == OPER_MUL)
             val = create_node (TYPE_OPER, OPER_MUL, val, val2, error);
@@ -207,21 +206,21 @@ Node* get_t (DifError* error, const Tokens* tok)
     return val;
 }
 
-Node* get_n (DifError* error, const Tokens* tok)
+Node* get_n (DifError* error, const Tokens* tok, int* n_tok)
 {
     double val = 0;
     int n_var = -1;
 
     if (CUR_TYPE == TYPE_NUM)
     {
-        val = tok[n_tok].elem.num;
-        n_tok++;
+        val = tok[*n_tok].elem.num;
+        (*n_tok)++;
         return create_node (TYPE_NUM, val, NULL, NULL, error);
     }
     else if (CUR_TYPE == TYPE_VAR)
     {
-        n_var = tok[n_tok].elem.n_var;
-        n_tok++;
+        n_var = tok[*n_tok].elem.n_var;
+        (*n_tok)++;
         return create_node (TYPE_VAR, n_var, NULL, NULL, error);
     }
     else
@@ -231,7 +230,7 @@ Node* get_n (DifError* error, const Tokens* tok)
     }
 }
 
-bool couple_oper (const Tokens* tok)
+bool couple_oper (const Tokens* tok, int n_tok)
 {
     if (tok[n_tok].type == TYPE_OPER)
         if (!OPER_ARRAY[(int) tok[n_tok].elem.oper].is_func)

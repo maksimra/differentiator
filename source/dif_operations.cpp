@@ -43,7 +43,7 @@ Node* dif_div  (const Node* node, DifError* error)
                                     error),
                         create_node (TYPE_OPER, OPER_POW,
                                     CR,
-                                    create_node (TYPE_NUM, 0, NULL, NULL, error),
+                                    create_node (TYPE_NUM, 2, NULL, NULL, error),
                                     error),
                         error);
 }
