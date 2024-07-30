@@ -10,8 +10,8 @@ Node* parse (DifError* error, const Tokens* tok)
 {
     Node* val = get_e (error, tok);
 
-    if ((CUR_TYPE != TXT) ||
-        (CUR_TYPE == TXT && tok[n_tok].elem.symbol != '$'))
+    if ((CUR_TYPE != TYPE_TXT) ||
+        (CUR_TYPE == TYPE_TXT && tok[n_tok].elem.symbol != '$'))
     {
         fprintf (stderr, "Не смогли обработать выражение :(\n");
         *error = DIF_ERROR_SYNTAX;
@@ -23,7 +23,7 @@ Node* parse (DifError* error, const Tokens* tok)
 Node* get_e (DifError* error, const Tokens* tok)
 {
     Node* val = NULL;
-    if (CUR_TYPE == OPER && CUR_OPER == SUB)
+    if (CUR_TYPE == TYPE_OPER && CUR_OPER == OPER_SUB)
     {
         n_tok++;
 
@@ -36,14 +36,14 @@ Node* get_e (DifError* error, const Tokens* tok)
             return NULL;
         }
 
-        val = create_node (OPER, MUL, create_node (NUM, -1, NULL, NULL, error), get_t (error, tok), error);
+        val = create_node (TYPE_OPER, OPER_MUL, create_node (TYPE_NUM, -1, NULL, NULL, error), get_t (error, tok), error);
     }
     else
     {
         val = get_t (error, tok);
     }
-    while (CUR_TYPE == OPER && (CUR_OPER == ADD ||
-    CUR_OPER == SUB))
+    while (CUR_TYPE == TYPE_OPER && (CUR_OPER == OPER_ADD ||
+    CUR_OPER == OPER_SUB))
     {
         int old_n_tok = n_tok;
         n_tok++;
@@ -59,10 +59,10 @@ Node* get_e (DifError* error, const Tokens* tok)
         }
 
         Node* val2 = get_t (error, tok);
-        if (tok[old_n_tok].elem.oper == ADD)
-            val = create_node (OPER, ADD, val, val2, error);
+        if (tok[old_n_tok].elem.oper == OPER_ADD)
+            val = create_node (TYPE_OPER, OPER_ADD, val, val2, error);
         else
-            val = create_node (OPER, SUB, val, val2, error);
+            val = create_node (TYPE_OPER, OPER_SUB, val, val2, error);
     }
     return val;
 }
@@ -70,7 +70,7 @@ Node* get_e (DifError* error, const Tokens* tok)
 Node* get_k (DifError* error, const Tokens* tok)
 {
     Node* val = get_p (error, tok);
-    if (CUR_TYPE == OPER && CUR_OPER == POW)
+    if (CUR_TYPE == TYPE_OPER && CUR_OPER == OPER_POW)
     {
         n_tok++;
 
@@ -85,9 +85,9 @@ Node* get_k (DifError* error, const Tokens* tok)
         }
 
         Node* val2 = get_p (error, tok);
-        val = create_node (OPER, POW, val, val2, error);
+        val = create_node (TYPE_OPER, OPER_POW, val, val2, error);
 
-        if (CUR_TYPE == OPER && CUR_OPER == POW)
+        if (CUR_TYPE == TYPE_OPER && CUR_OPER == OPER_POW)
         {
             *error = DIF_ERROR_SYNTAX;
             fprintf (stderr, "Введено некорректное выражение: "
@@ -99,12 +99,12 @@ Node* get_k (DifError* error, const Tokens* tok)
 
 Node* get_s (DifError* error, const Tokens* tok)
 {
-    if (CUR_TYPE == OPER)
+    if (CUR_TYPE == TYPE_OPER)
     {
         int n_oper = CUR_OPER;
         n_tok++;
 
-        if (CUR_TYPE == OPER)
+        if (CUR_TYPE == TYPE_OPER)
         {
             *error = DIF_ERROR_SYNTAX;
             fprintf (stderr, "Введено некорректное выражение: оператор \"%s\" сразу после оператора \"%s\"."
@@ -113,7 +113,7 @@ Node* get_s (DifError* error, const Tokens* tok)
             return NULL;
         }
 
-        if (CUR_TYPE == TXT && tok[n_tok].elem.symbol != '(')
+        if (CUR_TYPE == TYPE_TXT && tok[n_tok].elem.symbol != '(')
         {
             *error = DIF_ERROR_SYNTAX;
             fprintf (stderr, "Введено некорректное выражение:"
@@ -125,33 +125,34 @@ Node* get_s (DifError* error, const Tokens* tok)
         n_tok++;
         Node* val = get_e (error, tok);
 
-        if (CUR_TYPE == TXT && tok[n_tok].elem.symbol != ')')
+        if (CUR_TYPE == TYPE_TXT && tok[n_tok].elem.symbol != ')')
             *error = DIF_ERROR_SYNTAX;
 
         n_tok++;
 
-        switch (OP[n_oper].op_enum)
+        switch (OPER_ARRAY[n_oper].op_enum)
         {
-            case SIN:
-                val = create_node (OPER, SIN, NULL, val, error);
+            case OPER_SIN:
+                val = create_node (TYPE_OPER, OPER_SIN, NULL, val, error);
                 return val;
-            case COS:
-                val = create_node (OPER, COS, NULL, val, error);
+            case OPER_COS:
+                val = create_node (TYPE_OPER, OPER_COS, NULL, val, error);
                 return val;
-            case LN:
-                val = create_node (OPER, LN, NULL, val, error);
+            case OPER_LN:
+                val = create_node (TYPE_OPER, OPER_LN, NULL, val, error);
                 return val;
-            case SQRT:
-                val = create_node (OPER, SQRT, NULL, val, error);
+            case OPER_SQRT:
+                val = create_node (TYPE_OPER, OPER_SQRT, NULL, val, error);
                 return val;
-            case EXP:
-                val = create_node (OPER, EXP, NULL, val, error);
+            case OPER_EXP:
+                val = create_node (TYPE_OPER, OPER_EXP, NULL, val, error);
                 return val;
-            case ADD:
-            case SUB:
-            case MUL:
-            case DIV:
-            case POW:
+            case OPER_ADD:
+            case OPER_SUB:
+            case OPER_MUL:
+            case OPER_DIV:
+            case OPER_POW:
+            case OPER_NONE:
             default:
                 *error = DIF_ERROR_FUNC;
         }
@@ -161,12 +162,12 @@ Node* get_s (DifError* error, const Tokens* tok)
 
 Node* get_p (DifError* error, const Tokens* tok)
 {
-    if (CUR_TYPE == TXT && tok[n_tok].elem.symbol == '(')
+    if (CUR_TYPE == TYPE_TXT && tok[n_tok].elem.symbol == '(')
     {
         n_tok++;
         Node* val = get_e (error, tok);
 
-        if (CUR_TYPE == TXT && tok[n_tok].elem.symbol != ')')
+        if (CUR_TYPE == TYPE_TXT && tok[n_tok].elem.symbol != ')')
             *error = DIF_ERROR_SYNTAX;
 
         n_tok++;
@@ -180,8 +181,8 @@ Node* get_p (DifError* error, const Tokens* tok)
 Node* get_t (DifError* error, const Tokens* tok)
 {
     Node* val = get_s (error, tok);
-    while (CUR_TYPE == OPER && (CUR_OPER == MUL
-    || CUR_OPER == DIV))
+    while (CUR_TYPE == TYPE_OPER && (CUR_OPER == OPER_MUL
+    || CUR_OPER == OPER_DIV))
     {
         int old_n_tok = n_tok;
         n_tok++;
@@ -198,10 +199,10 @@ Node* get_t (DifError* error, const Tokens* tok)
 
         Node* val2 = get_s (error, tok);
 
-        if (tok[old_n_tok].elem.oper == MUL)
-            val = create_node (OPER, MUL, val, val2, error);
+        if (tok[old_n_tok].elem.oper == OPER_MUL)
+            val = create_node (TYPE_OPER, OPER_MUL, val, val2, error);
         else
-            val = create_node (OPER, DIV, val, val2, error);
+            val = create_node (TYPE_OPER, OPER_DIV, val, val2, error);
     }
     return val;
 }
@@ -211,17 +212,17 @@ Node* get_n (DifError* error, const Tokens* tok)
     double val = 0;
     int n_var = -1;
 
-    if (CUR_TYPE == NUM)
+    if (CUR_TYPE == TYPE_NUM)
     {
         val = tok[n_tok].elem.num;
         n_tok++;
-        return create_node (NUM, val, NULL, NULL, error);
+        return create_node (TYPE_NUM, val, NULL, NULL, error);
     }
-    else if (CUR_TYPE == VAR)
+    else if (CUR_TYPE == TYPE_VAR)
     {
         n_var = tok[n_tok].elem.n_var;
         n_tok++;
-        return create_node (VAR, n_var, NULL, NULL, error);
+        return create_node (TYPE_VAR, n_var, NULL, NULL, error);
     }
     else
     {
@@ -232,8 +233,8 @@ Node* get_n (DifError* error, const Tokens* tok)
 
 bool couple_oper (const Tokens* tok)
 {
-    if (tok[n_tok].type == OPER)
-        if (!OP[(int) tok[n_tok].elem.oper].is_func)
+    if (tok[n_tok].type == TYPE_OPER)
+        if (!OPER_ARRAY[(int) tok[n_tok].elem.oper].is_func)
             return true;
 
     return false;

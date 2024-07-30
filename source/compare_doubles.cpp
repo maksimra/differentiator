@@ -1,4 +1,4 @@
-#include "../include/comp_doub.hpp"
+#include "../include/compare_doubles.hpp"
 #include <math.h>
 
 const double ACCURACY = 1e-5;

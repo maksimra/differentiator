@@ -42,17 +42,17 @@ void draw_right (const Node* node, FILE* file, const Vars* VARS)
             color = "red";
         else
             color = "green";
-        if (node->right->type == OPER)
+        if (node->right->type == TYPE_OPER)
         {
             fprintf (file, "{\"%s\n%p\"--\"%s\n%p\"[color = \"%s\"]};\n",
             get_oper_name (node->value.oper), node, get_oper_name (node->right->value.oper), node->right, color);
         }
-        else if (node->right->type == NUM)
+        else if (node->right->type == TYPE_NUM)
         {
             fprintf (file, "{\"%s\n%p\"--\"%.3lf\n%p\"[color = \"%s\"]};\n",
             get_oper_name (node->value.oper), node, node->right->value.number, node->right, color);
         }
-        else if (node->right->type == VAR)
+        else if (node->right->type == TYPE_VAR)
         {
             fprintf (file, "{\"%s\n%p\"--\"%.*s\n%p\"[color = \"%s\"]};\n",
             get_oper_name (node->value.oper), node, (int) VARS[node->right->value.n_var].len, VARS[node->right->value.n_var].name, node->right, color);
@@ -68,20 +68,20 @@ void draw_left (const Node* node, FILE* file, const Vars* VARS)
     if (node->left != NULL)
     {
         if (node->left->left == NULL && node->left->right == NULL)
-            color = "red"; // sprintf and snprintf
+            color = "red";
         else
             color = "green";
-        if (node->left->type == OPER)
+        if (node->left->type == TYPE_OPER)
         {
             fprintf (file, "{\"%s\n%p\"--\"%s\n%p\"[color = \"%s\"]};\n",
             get_oper_name (node->value.oper), node, get_oper_name (node->left->value.oper), node->left, color);
         }
-        else if (node->left->type == NUM)
+        else if (node->left->type == TYPE_NUM)
         {
             fprintf (file, "{\"%s\n%p\"--\"%.3lf\n%p\"[color = \"%s\"]};\n",
             get_oper_name (node->value.oper), node, node->left->value.number, node->left, color);
         }
-        else if (node->left->type == VAR)
+        else if (node->left->type == TYPE_VAR)
         {
             fprintf (file, "{\"%s\n%p\"--\"%.*s\n%p\"[color = \"%s\"]};\n",
             get_oper_name (node->value.oper), node, (int) VARS[node->left->value.n_var].len, VARS[node->left->value.n_var].name, node->left, color);

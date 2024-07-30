@@ -8,9 +8,7 @@ const int NUM_OF_CHAR_TO_ANSW = 10;
 
 const int NOT_VAR = -1;
 
-const int NOT_OPER = -1;
-
-const int NUM_OF_OPERS = sizeof (OP) / sizeof (OP[0]);
+const int NUM_OF_OPERS = sizeof (OPER_ARRAY) / sizeof (OPER_ARRAY[0]);
 
 DifError dif_set_log_file (FILE* file)
 {
@@ -20,6 +18,7 @@ DifError dif_set_log_file (FILE* file)
 
 DifError read_file (FILE* file, const char* file_name, char** buffer, size_t* size)
 {
+    assert (file != NULL);
     struct stat statbuf = {};
 
     if (stat (file_name, &statbuf))
@@ -41,31 +40,33 @@ DifError read_file (FILE* file, const char* file_name, char** buffer, size_t* si
     return DIF_NO_ERROR;
 }
 
-int search_oper (const char* str, size_t len)
+Operator search_oper (const char* str, size_t len)
 {
-    for (int n_oper = 0; n_oper < NUM_OF_OPERS; n_oper ++)
-        if (strncmp (str, OP[n_oper].name, len) == 0)
-            return n_oper;
+    for (int n_oper = 1; n_oper < NUM_OF_OPERS; n_oper++)
+    {
+        if (strncmp (str, OPER_ARRAY[n_oper].name, len) == 0)
+            return OPER_ARRAY[n_oper].op_enum;
+    }
 
-    return NOT_OPER;
+    return OPER_NONE;
 }
 
 void printf_str (FILE* file, const Node* node, int n_space)
 {
     switch (node->type)
     {
-        case OPER:
+        case TYPE_OPER:
             fprintf (file, "%*c(\"%s\"\n", n_space, ' ', get_oper_name (node->value.oper));
             return;
-        case VAR:
+        case TYPE_VAR:
             fprintf (file, "%*c(\"<%d>\"\n", n_space, ' ', node->value.n_var);
             return;
-        case NUM:
+        case TYPE_NUM:
             fprintf (file, "%*c(\"%.3lf\"\n", n_space, ' ', node->value.number);
             return;
-        case TXT:
+        case TYPE_TXT:
         default:
-            assert (0);
+            assert (0 && "Attempt to print TYPE_TXT to svg file.");
     }
 }
 
@@ -119,13 +120,13 @@ Node* create_node (Type type, double value, Node* left, Node* right, DifError* e
 
     new_node->type = type;
 
-    if (type == OPER)
-        new_node->value.oper = (Oper) value;
+    if (type == TYPE_OPER)
+        new_node->value.oper = (Operator) value;
 
-    else if (type == NUM)
+    else if (type == TYPE_NUM)
         new_node->value.number = value;
 
-    else if (type == VAR)
+    else if (type == TYPE_VAR)
         new_node->value.n_var = (int) value;
 
     new_node->left = left;
@@ -218,19 +219,19 @@ Node* diff (const Node* node, DifError* error)
 {
     switch (node->type)
     {
-        case NUM:
-            return create_node (NUM, 0, NULL, NULL, error);
-        case VAR:
-            return create_node (NUM, 1, NULL, NULL, error);
-        case OPER:
-            return OP[(int) node->value.oper].dif(node, error);
-        case TXT:
+        case TYPE_NUM:
+            return create_node (TYPE_NUM, 0, NULL, NULL, error);
+        case TYPE_VAR:
+            return create_node (TYPE_NUM, 1, NULL, NULL, error);
+        case TYPE_OPER:
+            return OPER_ARRAY[(int) node->value.oper].dif(node, error);
+        case TYPE_TXT:
         default:
             assert (0);
     }
 }
 
-DifError token (Tokens* tok, Vars* vars, char* buffer, int max_n_vars)
+DifError token (Tokens* tok, Vars* vars, const char* buffer, int max_n_vars)
 {
     DifError error = DIF_NO_ERROR;
     int n_tok = 0;
@@ -253,23 +254,23 @@ DifError token (Tokens* tok, Vars* vars, char* buffer, int max_n_vars)
         }
     }
 
-    tok[n_tok].type = TXT;
+    tok[n_tok].type = TYPE_TXT;
     tok[n_tok].elem.symbol = '$';
     token_dump (tok, n_tok, vars);
     return DIF_NO_ERROR;
 }
 
-bool try_var (Tokens* tok, int n_tok, Vars* vars, int* n_vars, int max_n_vars, char** buffer, DifError* error)
+bool try_var (Tokens* tok, int n_tok, Vars* vars, int* n_vars, int max_n_vars, const char** buffer, DifError* error)
 {
     if (isalpha (**buffer))
     {
-        char* start_position = *buffer;
+        const char* start_position = *buffer;
 
         (*buffer)++;
         while (isalpha (**buffer))
             (*buffer)++;
 
-        tok[n_tok].type = VAR;
+        tok[n_tok].type = TYPE_VAR;
         int n_var = search_var (vars, *n_vars, start_position, (size_t) (*buffer - start_position));
         if (n_var != NOT_VAR)
         {
@@ -294,7 +295,7 @@ bool try_var (Tokens* tok, int n_tok, Vars* vars, int* n_vars, int max_n_vars, c
     return false;
 }
 
-bool try_function (Tokens* tok, int n_tok, char** buffer)
+bool try_function (Tokens* tok, int n_tok, const char** buffer)
 {
     size_t len_of_function = 0;
 
@@ -304,22 +305,22 @@ bool try_function (Tokens* tok, int n_tok, char** buffer)
         while (isalpha ((*buffer)[len_of_function]))
             len_of_function++;
 
-        int n_oper = search_oper (*buffer, len_of_function);
-        if (n_oper != NOT_OPER)
+        Operator oper = search_oper (*buffer, len_of_function);
+        if (oper != OPER_NONE)
         {
             (*buffer) += len_of_function;
-            fill_token_oper (tok, n_tok, n_oper);
+            fill_token_oper (tok, n_tok, oper);
             return true;
         }
     }
     return false;
 }
 
-bool try_parenthesis (Tokens* tok, int n_tok, char** buffer)
+bool try_parenthesis (Tokens* tok, int n_tok, const char** buffer)
 {
     if ((**buffer) == '(' || (**buffer) == ')')
     {
-        tok[n_tok].type = TXT;
+        tok[n_tok].type = TYPE_TXT;
         tok[n_tok].elem.symbol = **buffer;
         (*buffer)++;
         return true;
@@ -327,7 +328,7 @@ bool try_parenthesis (Tokens* tok, int n_tok, char** buffer)
     return false;
 }
 
-bool try_digit (Tokens* tok, int n_tok, char** buffer)
+bool try_digit (Tokens* tok, int n_tok, const char** buffer)
 {
     if (isdigit (**buffer))
     {
@@ -339,37 +340,39 @@ bool try_digit (Tokens* tok, int n_tok, char** buffer)
 
 }
 
-bool try_char_operation (Tokens* tok, int n_tok, char** buffer)
+bool try_char_operation (Tokens* tok, int n_tok, const char** buffer)
 {
-    int n_oper = search_char_operation (*buffer);
-    if (n_oper != NOT_OPER)
+    Operator oper = search_char_operation (*buffer);
+    if (oper != OPER_NONE)
     {
         (*buffer)++;
-        fill_token_oper (tok, n_tok, n_oper);
+        fill_token_oper (tok, n_tok, oper);
         return true;
     }
     return false;
 }
 
-int search_char_operation (const char* buffer)
+Operator search_char_operation (const char* buffer)
 {
-    for (int num_of_oper = 0; OP[num_of_oper].is_func == false; num_of_oper++)
-        if (strncmp (buffer, OP[num_of_oper].name, sizeof (char)) == 0)
-            return num_of_oper;
-    return NOT_OPER;
+    for (int num_of_oper = 1; OPER_ARRAY[num_of_oper].is_func == false; num_of_oper++)
+    {
+        if (strncmp (buffer, OPER_ARRAY[num_of_oper].name, sizeof (char)) == 0)
+            return OPER_ARRAY[num_of_oper].op_enum;
+    }
+    return OPER_NONE;
 }
 
-void fill_token_oper (Tokens* tok, int n_tok, int n_oper)
+void fill_token_oper (Tokens* tok, int n_tok, Operator oper)
 {
-    tok[n_tok].type = OPER;
-    tok[n_tok].elem.oper = (Oper) n_oper;
+    tok[n_tok].type = TYPE_OPER;
+    tok[n_tok].elem.oper = oper;
 }
 
 size_t fill_token_double (Tokens* tok, int n_tok, const char* buffer)
 {
     double number = NAN;
     sscanf (buffer, "%lf", &number);
-    tok[n_tok].type = NUM;
+    tok[n_tok].type = TYPE_NUM;
     tok[n_tok].elem.num = number;
 
     size_t len_of_double = 0;
@@ -395,9 +398,9 @@ int search_var (Vars* vars, int n_vars, const char* begin, size_t len)
     return NOT_VAR;
 }
 
-const char* get_oper_name (Oper oper)
+const char* get_oper_name (Operator oper)
 {
-    return OP[(int) oper].name;
+    return OPER_ARRAY[(int) oper].name;
 }
 
 void token_dump (const Tokens* tok, int n_tok, const Vars* vars)
@@ -406,16 +409,16 @@ void token_dump (const Tokens* tok, int n_tok, const Vars* vars)
     {
         switch (tok[pass].type)
         {
-            case OPER:
+            case TYPE_OPER:
                 PRINT ("OPER: %d --> %s\n", pass, get_oper_name (tok[pass].elem.oper));
                 break;
-            case NUM:
+            case TYPE_NUM:
                 PRINT ("NUM: %d --> %lf\n", pass, tok[pass].elem.num);
                 break;
-            case VAR:
+            case TYPE_VAR:
                 PRINT ("VAR: %d --> %.*s\n", pass, (int) vars[tok[pass].elem.n_var].len, vars[tok[pass].elem.n_var].name);
                 break;
-            case TXT:
+            case TYPE_TXT:
                 PRINT ("TXT: %d --> %c\n", pass, tok[pass].elem.symbol);
                 break;
             default:
@@ -424,7 +427,7 @@ void token_dump (const Tokens* tok, int n_tok, const Vars* vars)
     }
 }
 
-void skip_space (char** str)
+void skip_space (const char** str)
 {
     while (isspace(**str))
         (*str)++;
@@ -467,8 +470,8 @@ Node* zeros_and_ones (Node* node, bool* change, DifError* error)
     if (node->right != NULL)
         node->right = zeros_and_ones (node->right, change, error);
 
-    if (node->type == OPER)
-        return OP[(int) node->value.oper].smp(node, change, error);
+    if (node->type == TYPE_OPER)
+        return OPER_ARRAY[(int) node->value.oper].smp(node, change, error);
 
     return node;
 }
@@ -481,11 +484,11 @@ Node* count_const (Node* node, bool* change, DifError* error)
     if (node->right != NULL)
         node->right = count_const (node->right, change, error);
 
-    if ((node->left == NULL && node->right != NULL && node->right->type == NUM) ||
-        (node->left != NULL && node->left->type == NUM && node->right->type == NUM))
+    if ((node->left == NULL && node->right != NULL && node->right->type == TYPE_NUM) ||
+        (node->left != NULL && node->left->type == TYPE_NUM && node->right->type == TYPE_NUM))
     {
         *change = true;
-        return OP[(int) node->value.oper].eval(node, error);
+        return OPER_ARRAY[(int) node->value.oper].eval(node, error);
     }
 
     return node;
@@ -588,9 +591,9 @@ Node* change_x0 (Node* node, double x0)
     if (node->right != NULL)
         node->right = change_x0 (node->right, x0);
 
-    if (node->type == VAR)
+    if (node->type == TYPE_VAR)
     {
-        node->type = NUM;
+        node->type = TYPE_NUM;
         node->value.number = x0;
     }
     return node;

@@ -11,49 +11,50 @@
 #include <math.h>
 #include <unistd.h>
 
-enum Oper
+enum Operator
 {
-    ADD  = 0,
-    SUB  = 1,
-    MUL  = 2,
-    DIV  = 3,
-    POW  = 4,
-    SIN  = 5,
-    COS  = 6,
-    LN   = 7,
-    SQRT = 8,
-    EXP  = 9
+    OPER_NONE = 0,
+    OPER_ADD  = 1,
+    OPER_SUB  = 2,
+    OPER_MUL  = 3,
+    OPER_DIV  = 4,
+    OPER_POW  = 5,
+    OPER_SIN  = 6,
+    OPER_COS  = 7,
+    OPER_LN   = 8,
+    OPER_SQRT = 9,
+    OPER_EXP  = 10
 };
 
 union ExprElem
 {
     double num;
     char symbol;
-    Oper oper;
+    Operator oper;
     int n_var;
 };
 
 
 struct Vars
 {
-    char* name;
+    const char* name;
     size_t len;
     int num;
 };
 
 union Value
 {
-    Oper oper;
+    Operator oper;
     double number;
     int n_var;
 };
 
 enum Type
 {
-    OPER = 1,
-    NUM  = 2,
-    VAR  = 3,
-    TXT  = 4
+    TYPE_OPER = 1,
+    TYPE_NUM  = 2,
+    TYPE_VAR  = 3,
+    TYPE_TXT  = 4
 };
 
 struct Tokens
@@ -96,8 +97,7 @@ enum DifError
 
 struct DifOps
 {
-    Oper op_enum;
-    int number;
+    Operator op_enum;
     const char* name;
     size_t len;
     Node* (*dif)  (const Node* node, DifError* error);
@@ -137,23 +137,22 @@ Node* smp_sqrt  (Node* node, bool* change, DifError* error);
 Node* smp_exp   (Node* node, bool* change, DifError* error);
 Node* smp_pow   (Node* node, bool* change, DifError* error);
 
-const DifOps OP[] =
+const DifOps OPER_ARRAY[] =
 {
-    {ADD,  0, "+",    1, dif_add,  eval_add,  smp_add,  false},
-    {SUB,  1, "-",    1, dif_sub,  eval_sub,  smp_sub,  false},
-    {MUL,  2, "*",    1, dif_mul,  eval_mul,  smp_mul,  false},
-    {DIV,  3, "/",    1, dif_div,  eval_div,  smp_div,  false},
-    {POW,  4, "^",    1, dif_pow,  eval_pow,  smp_pow,  false},
-    {SIN,  5, "sin",  3, dif_sin,  eval_sin,  smp_sin,  true},
-    {COS,  6, "cos",  3, dif_cos,  eval_cos,  smp_cos,  true},
-    {LN,   7, "ln",   2, dif_ln,   eval_ln,   smp_ln,   true},
-    {SQRT, 8, "sqrt", 4, dif_sqrt, eval_sqrt, smp_sqrt, true},
-    {EXP,  9, "exp",  3, dif_exp,  eval_exp,  smp_exp,  true}
+    {OPER_NONE},
+    {OPER_ADD,  "+",    1, dif_add,  eval_add,  smp_add,  false},
+    {OPER_SUB,  "-",    1, dif_sub,  eval_sub,  smp_sub,  false},
+    {OPER_MUL,  "*",    1, dif_mul,  eval_mul,  smp_mul,  false},
+    {OPER_DIV,  "/",    1, dif_div,  eval_div,  smp_div,  false},
+    {OPER_POW,  "^",    1, dif_pow,  eval_pow,  smp_pow,  false},
+    {OPER_SIN,  "sin",  3, dif_sin,  eval_sin,  smp_sin,  true},
+    {OPER_COS,  "cos",  3, dif_cos,  eval_cos,  smp_cos,  true},
+    {OPER_LN,   "ln",   2, dif_ln,   eval_ln,   smp_ln,   true},
+    {OPER_SQRT, "sqrt", 4, dif_sqrt, eval_sqrt, smp_sqrt, true},
+    {OPER_EXP,  "exp",  3, dif_exp,  eval_exp,  smp_exp,  true}
 };
 
-const int N_FUNC = sizeof (OP) / sizeof (OP[0]);
-
-int           search_oper              (const char* str, size_t len);
+Operator      search_oper              (const char* str, size_t len);
 void          print_tree_txt_incr_tabs (Node* node, FILE* file);
 void          print_node_or_decr_tabs  (Node* node, FILE* file, int* n_space);
 void          printf_str               (FILE* file, const Node* node, int n_space);
@@ -171,8 +170,8 @@ void          draw_right               (const Node* node, FILE* file, const Vars
 void          draw_left                (const Node* node, FILE* file, const Vars* vars);
 Node*         diff                     (const Node* node, DifError* error);
 DifError      read_file                (FILE* file, const char* file_name, char** buffer, size_t* size);
-DifError      token                    (Tokens* tok, Vars* vars, char* buffer, int MAX_N_VARS);
-void          skip_space               (char** str);
+DifError      token                    (Tokens* tok, Vars* vars, const char* buffer, int MAX_N_VARS);
+void          skip_space               (const char** str);
 void          token_dump               (const Tokens* tok, int n_tok, const Vars* vars);
 Node*         simplification           (Node* node, DifError* error);
 Node*         zeros_and_ones           (Node* node, bool* change, DifError* error);
@@ -180,16 +179,16 @@ Node*         count_const              (Node* node, bool* change, DifError* erro
 DifError      taylor                   (const Node* node);
 int           fact                     (int n);
 Node*         change_x0                (Node* node, double x0);
-const char*   get_oper_name            (Oper oper);
+const char*   get_oper_name            (Operator oper);
 int           search_var               (Vars* vars, int n_vars, const char* begin, size_t len);
-bool          try_char_operation       (Tokens* tok, int n_tok, char** buffer);
-bool          try_digit                (Tokens* tok, int n_tok, char** buffer);
-bool          try_parenthesis          (Tokens* tok, int n_tok, char** buffer);
-bool          try_function             (Tokens* tok, int n_tok, char** buffer);
-bool          try_var                  (Tokens* tok, int n_tok, Vars* vars, int* n_vars, int max_n_vars, char** buffer, DifError* error);
-void          fill_token_oper          (Tokens* tok, int n_tok, int n_oper);
+bool          try_char_operation       (Tokens* tok, int n_tok, const char** buffer);
+bool          try_digit                (Tokens* tok, int n_tok, const char** buffer);
+bool          try_parenthesis          (Tokens* tok, int n_tok, const char** buffer);
+bool          try_function             (Tokens* tok, int n_tok, const char** buffer);
+bool          try_var                  (Tokens* tok, int n_tok, Vars* vars, int* n_vars, int max_n_vars, const char** buffer, DifError* error);
+void          fill_token_oper          (Tokens* tok, int n_tok, Operator oper);
 size_t        fill_token_double        (Tokens* tok, int n_tok, const char* buffer);
-int           search_char_operation    (const char* buffer);
+Operator      search_char_operation    (const char* buffer);
 DifError      print_decompose          (const Node* node, double x0, int accuracy);
 
 #endif // DIFF_H

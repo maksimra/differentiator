@@ -26,8 +26,11 @@ FLAGS := -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ \
 		 null,object-size,return,returns-nonnull-attribute,shift,$\
 		 signed-integer-overflow,undefined,unreachable,vla-bound,vptr
 
-output: $(BUILD)/taylor.o $(program_OBJ)
+output: $(BUILD) $(BUILD)/taylor.o $(program_OBJ)
 	@g++ $(program_OBJ) $(BUILD)/taylor.o $(FLAGS) -o $(BUILD)/output
+
+$(BUILD):
+	@mkdir $(BUILD)
 
 $(BUILD)/parser.o: source/parser.cpp
 	@g++ $(FLAGS) -c source/parser.cpp -o $(BUILD)/parser.o
@@ -44,7 +47,7 @@ $(BUILD)/check_args.o: source/check_args.cpp
 $(BUILD)/dif_operations.o: source/dif_operations.cpp
 	@g++ $(FLAGS) -c source/dif_operations.cpp -o $(BUILD)/dif_operations.o
 
-$(BUILD)/diff.o: source/diff.cpp
+$(BUILD)/diff.o: source/diff.cpp include/diff.hpp
 	@g++ $(FLAGS) -c source/diff.cpp -o $(BUILD)/diff.o
 
 $(BUILD)/taylor.o: taylor.cpp
