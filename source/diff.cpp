@@ -1,4 +1,5 @@
 #include "../include/diff.hpp"
+#include "../include/compare_doubles.hpp"
 
 static FILE* log_file = stderr;
 
@@ -563,11 +564,12 @@ DifError print_decompose (const Node* node, double x0, int accuracy)
             return error;
         }
         tree_dtor (prev_node);
-        printf ("%lf * (x - %lf)^%d / %d + ", change_node->value.number, x0, i, fact (i));
+        if (compare_doubles (change_node->value.number, 0) != 0)
+            printf ("%g * (x - %g)^%d / %d + ", change_node->value.number, x0, i, fact (i));
         tree_dtor (change_node);
     }
     tree_dtor (copy_node);
-    printf ("o (x - %lf)^%d\n", x0, accuracy);
+    printf ("o (x - %g)^%d\n", x0, accuracy);
     printf ("It was difficult.\n");
 
     return error;
