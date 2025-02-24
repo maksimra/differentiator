@@ -29,3 +29,4 @@ You should create .txt file which contains math expression (in folder with repos
 ***At the end of the expression should be a sign '$'!***
 ### Example:
 ![image](https://github.com/user-attachments/assets/2cd59ff9-66e1-4bc2-a32a-5387b6785caa)
+![tree](img/diff.png)
