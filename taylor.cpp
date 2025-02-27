@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include "include/parser.hpp"
 #include "include/check_args.hpp"
 
@@ -10,16 +12,13 @@ int main (const int argc, const char* argv[])
     DifError dif_error = DIF_NO_ERROR;
     ArgsError args_error = ARGS_NO_ERROR;
 
-    FILE* log_file_check_args = fopen ("log_file_check_args.txt", "w");
-    FILE* log_file_dif        = fopen ("log_file_dif.txt", "w");
+    FILE* log_file = fopen ("log_file.txt", "w");
 
-    if (log_file_check_args == NULL)
-        printf ("log_file_check_args.txt wasn't open.\n");
-    if (log_file_dif == NULL)
-        printf ("log_file_dif.txt wasn't open.\n");
+    if (log_file == NULL)
+        fprintf (stderr, "log_file.txt wasn't open.\n");
 
-    dif_set_log_file  (log_file_dif);        // pass NULL if you don't want
-    args_set_log_file (log_file_check_args); // to write to the log file
+    dif_set_log_file  (log_file); // pass NULL if you don't want
+    args_set_log_file (log_file); // to write to the log file
 
     args_error = args_check (argc, argv, necessary_n_args);
     if (args_print_if_error (args_error))
@@ -31,7 +30,7 @@ int main (const int argc, const char* argv[])
     FILE* source = fopen (name_of_express_file, "r");
     if (source == NULL)
     {
-        printf ("source file wasn't open.\n");
+        fprintf (stderr, "source file wasn't open.\n");
         return EXIT_FAILURE;
     }
 
